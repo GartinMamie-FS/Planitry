@@ -106,7 +106,7 @@ This timeline tracks the project across the core 6-week window, mapping progress
 1. **Clone the Repository:**
 
    ```bash
-   git clone [YOUR_GITHUB_REPO_URL]
+   git clone https://github.com/GartinMamie-FS/Planitry.git
    cd Planitry
    
 2. **API Key Configuration (Required for Week 3+):**
