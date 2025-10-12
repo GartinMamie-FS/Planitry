@@ -13,23 +13,34 @@ import SwiftUI
 // This view displays the details of the single generated meal.
 struct ResultsView: View {
     
-    // The view must receive a Meal object to display the results.
-    let meal: Meal
+    @Environment(\.openURL) var openURL
     
-    // This is the primary color for the buttons and accents
+    let meal: MealModel
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 
-                // MARK: - Meal Image (Mocked)
-                // In the final version, this will load the image from the meal.image URL
-                Image("placeholder_meal_image")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 250)
-                    .clipped()
+                // MARK: - Meal Image
+                AsyncImage(url: URL(string: meal.imageUrl)) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } else if phase.error != nil {
+                        Image(systemName: "photo.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 250)
+                            .foregroundColor(.gray)
+                    } else {
+                        ProgressView()
+                            .frame(height: 250)
+                    }
+                }
+                .frame(height: 250)
+                .clipped()
                 
                 // MARK: - Meal Details Card
                 VStack(alignment: .leading, spacing: 15) {
@@ -44,41 +55,51 @@ struct ResultsView: View {
                     HStack {
                         Image(systemName: "flame.fill")
                             .foregroundColor(.orange)
-                        Text("Total Calories:")
+                        Text("Calories Per Serving:")
                             .fontWeight(.medium)
-                        Text("\(Int(meal.calories)) kcal")
+                        Text("\(meal.calculatedCalories) kcal")
                             .fontWeight(.bold)
                             .foregroundColor(primaryColor)
                     }
                     .font(.title3)
                     
+                    Text("Yields: \(Int(meal.yield)) servings (Total Recipe Calories: \(Int(meal.calories.rounded())) kcal)")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
                     Divider()
                     
-                    // Health Labels (Displaying mock data if available)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Health Labels:")
+                    // MARK: - Ingredients List
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Ingredients (\(meal.ingredientCount)):")
                             .font(.headline)
                         
-                        // Displaying a selection of health labels
-                        // In the future, this should iterate through meal.healthLabels
-                        Text(meal.healthLabels.isEmpty ? "None specified" : meal.healthLabels.joined(separator: ", "))
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                        // Display the list of ingredients
+                        ForEach(meal.ingredients, id: \.self) { ingredient in
+                            HStack(alignment: .top) {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(primaryColor)
+                                    .padding(.top, 5)
+                                Text(ingredient)
+                                    .font(.body)
+                            }
+                        }
                     }
+                    .padding(.bottom, 10)
                     
                     Divider()
                     
                     // MARK: - Recipe Link Button
                     Button(action: {
-                        // TODO: Implement external link opening (A8)
                         if let url = URL(string: meal.url) {
-                            // Code to open the URL externally goes here (e.g., UIApplication.shared.open(url))
-                            print("Opening recipe at: \(meal.url)")
+                            openURL(url)
+                            print("Attempting to open recipe at: \(meal.url)")
                         }
                     }) {
                         HStack {
                             Image(systemName: "link.circle.fill")
-                            Text("View Full Recipe Instructions")
+                            Text("View Full Recipe Instructions from \(meal.source)")
                         }
                         .font(.headline)
                         .foregroundColor(.white)
@@ -97,21 +118,5 @@ struct ResultsView: View {
         .edgesIgnoringSafeArea(.top)
         .navigationTitle("Your Meal Idea")
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Placeholder Data for Testing
-// This is necessary because the view requires a Meal object to compile.
-struct ResultsView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            ResultsView(meal: Meal(
-                label: "Spicy Tofu & Vegetable Stir-Fry",
-                image: "https://yourplaceholder.com/image.jpg",
-                url: "https://example.com/spicy-tofu-recipe",
-                calories: 450.5,
-                healthLabels: ["Vegan", "Gluten-Free", "Low-Sugar"] // Example data
-            ))
-        }
     }
 }

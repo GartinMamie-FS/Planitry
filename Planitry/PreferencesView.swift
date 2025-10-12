@@ -14,12 +14,13 @@ struct PreferencesView: View {
     // Access the shared settings object
     @ObservedObject var settings: UserSettings
     
-    // Convert the comma-separated string back to a Set for easy management in the UI
-    @State private var activeConstraints: Set<String> = {
-        // We create a temporary instance here to safely read the initial AppStorage value
-        let constraints = UserSettings().activeHealthConstraintsString.split(separator: ",")
-        return Set(constraints.map { String($0) })
-    }()
+    @State private var activeConstraints: Set<String>
+    
+    init(settings: UserSettings) {
+        self._settings = ObservedObject(wrappedValue: settings)
+        
+        _activeConstraints = State(initialValue: Set(settings.activeHealthConstraints))
+    }
     
     var body: some View {
         NavigationView {
@@ -27,7 +28,7 @@ struct PreferencesView: View {
                 // Section 1: Dietary Label
                 Section(header: Text("Dietary Preference (Required)")) {
                     Picker("Select Diet", selection: $settings.selectedDiet) {
-                        ForEach(["Low-Fat", "Low-Carb", "Keto", "Vegan", "Vegetarian", "Pescatarian"], id: \.self) { diet in
+                        ForEach(["Balanced", "High-Fiber", "High-Protein", "Low-Carb", "Low-Fat", "Low-Sodium"], id: \.self) { diet in
                             Text(diet)
                         }
                     }
@@ -35,13 +36,10 @@ struct PreferencesView: View {
                 
                 // Section 2: Calorie Budget
                 Section(header: Text("Maximum Calories (Required)")) {
-                    
-                    // Stepper for better UX and keyboard avoidance.
                     Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
                         HStack {
                             Text("Max Calories:")
                             Spacer()
-                            // Display the current value
                             Text("\(settings.maxCalories) kcal")
                                 .foregroundColor(.red)
                                 .fontWeight(.medium)
@@ -51,7 +49,6 @@ struct PreferencesView: View {
                 
                 // Section 3: Health Constraints
                 Section(header: Text("Health Constraints (Optional)")) {
-                    // Iterate through all possible constraints and create a toggle for each
                     ForEach(HealthConstraint.allCases) { constraint in
                         Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
                     }
@@ -61,6 +58,7 @@ struct PreferencesView: View {
             .onChange(of: activeConstraints) { newConstraints in
                 // When the local set changes, save it back to the persistence string
                 settings.activeHealthConstraintsString = newConstraints.joined(separator: ",")
+                print("Constraints Saved: \(settings.activeHealthConstraintsString)")
             }
         }
     }
