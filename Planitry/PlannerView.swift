@@ -10,33 +10,89 @@ import SwiftUI
 // MARK: - Planner View (A4)
 
 struct PlannerView: View {
-    
     // 1. Local State for Meal Selection
     @State private var selectedMealType: MealType = .breakfast
     
     // 2. Access to Global Preferences
     @ObservedObject var settings: UserSettings
     
+    // 3. Network Manager and Navigation State
+    @StateObject private var networkManager = NetworkManager()
+    @State private var mealResult: MealModel? = nil
+    
+    // State to trigger an alert on network error
+    @State private var alertError: NetworkError? = nil
+    
+    // State to trigger navigation on success
+    @State private var showResults = false
+    
     // Helper to format the health constraints string for display
     var constraintsDisplay: String {
-        let constraints = settings.activeHealthConstraintsString
-            .split(separator: ",")
-            .map { String($0).replacingOccurrences(of: "Free", with: " Free") }
+        let constraints = settings.activeHealthConstraints
+            .map { $0.replacingOccurrences(of: "-", with: " ").capitalized }
         
         return constraints.isEmpty ? "None" : constraints.joined(separator: ", ")
     }
     
-    // This is the primary color for the buttons and accents
+    // Primary color for styling
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
 
+    // MARK: - Network Action Function (A7)
+    func generateMeal() {
+        // Reset previous results/errors and hide the result view
+        mealResult = nil
+        alertError = nil
+        showResults = false
+        
+        // 1. Construct constraints object from user settings
+        let constraints = MealConstraints(
+            mealType: selectedMealType.rawValue,
+            maxCalories: settings.maxCalories,
+            healthConstraints: settings.activeHealthConstraints
+        )
+        
+        // 2. Execute network call in a Task
+        Task {
+            let result = await networkManager.fetchMeal(
+                for: constraints,
+                selectedDiet: settings.selectedDiet
+            )
+            
+            // 3. Update UI state based on result
+            await MainActor.run {
+                switch result {
+                case .success(let meal):
+                    self.mealResult = meal
+                    self.showResults = true
+                case .failure(let error):
+                    self.alertError = error
+                }
+            }
+        }
+    }
+    
+    // MARK: - View Body
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 
+                // --- Hidden NavigationLink for Result Transition ---
+                NavigationLink(
+                    destination: {
+                        guard let meal = mealResult else {
+                            return AnyView(Text("Error: Meal data not available.").foregroundColor(.red))
+                        }
+                        return AnyView(ResultsView(meal: meal))
+                    }(),
+                    isActive: $showResults,
+                    label: { EmptyView() }
+                )
+                .hidden()
+                
                 // MARK: - Header
                 VStack(spacing: 8) {
                     Text("Single Meal Generator")
-                        .font(.custom("Georgia-Bold", size: 30))
+                        .font(.system(size: 30, weight: .bold))
                         .foregroundColor(primaryColor)
                         .padding(.top, 20)
                     
@@ -54,7 +110,6 @@ struct PlannerView: View {
                         .foregroundColor(.gray)
                     
                     HStack {
-                        // Use a custom button style to match the segmented control look
                         ForEach(MealType.allCases) { meal in
                             MealTimeButton(
                                 meal: meal,
@@ -81,7 +136,7 @@ struct PlannerView: View {
                         Text("Diet:")
                             .fontWeight(.medium)
                         Spacer()
-                        Text(settings.selectedDiet)
+                        Text(settings.selectedDiet.capitalized)
                             .foregroundColor(primaryColor)
                     }
                     
@@ -90,20 +145,20 @@ struct PlannerView: View {
                             .fontWeight(.medium)
                         Spacer()
                         Text(constraintsDisplay)
-                            .foregroundColor(.orange) // Using orange to highlight labels
+                            .foregroundColor(.orange)
                             .multilineTextAlignment(.trailing)
                     }
                     
                     HStack {
-                        Text("Max Calories:")
+                        Text("Max Calories (Recipe Est.):")
                             .fontWeight(.medium)
                         Spacer()
-                        Text("\(settings.maxCalories) kcal")
+                        Text("\(settings.maxCalories * 2) kcal")
                             .foregroundColor(primaryColor)
                     }
                 }
                 .padding()
-                .background(Color(.systemYellow).opacity(0.1)) // Light yellow background
+                .background(Color(.systemYellow).opacity(0.1))
                 .cornerRadius(15)
                 .overlay(
                     RoundedRectangle(cornerRadius: 15)
@@ -112,33 +167,49 @@ struct PlannerView: View {
                 
                 Spacer()
                 
-                // MARK: - 3. Generate Button (A7)
-                // This button will trigger the API call in Week 3
-                Button(action: {
-                    // TODO: A5, A6, A7: Implement Network Call to Edamam using selectedMealType and settings
-                    print("Generating meal idea for \(selectedMealType.rawValue) with constraints...")
-                }) {
-                    Text("Generate Meal Idea")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(primaryColor.opacity(0.9))
-                        .cornerRadius(12)
-                        .shadow(radius: 5)
+                // MARK: - 3. Generate Button
+                Button(action: generateMeal) {
+                    if networkManager.isFetching {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(primaryColor.opacity(0.7))
+                            .cornerRadius(12)
+                    } else {
+                        Text("Generate Meal Idea")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(primaryColor.opacity(0.9))
+                            .cornerRadius(12)
+                            .shadow(radius: 5)
+                    }
                 }
                 .padding(.horizontal)
+                .disabled(networkManager.isFetching)
+                
+                Spacer()
                 
             }
             .padding()
             .navigationTitle("")
-            .navigationBarHidden(true) 
+            .navigationBarHidden(true)
+        }
+        // MARK: - Error Alert
+        .alert("Network Error", isPresented: Binding(
+            get: { alertError != nil },
+            set: { _ in alertError = nil }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertError?.localizedDescription ?? "An unknown error occurred while fetching the meal.")
         }
     }
 }
 
-// MARK: - Custom Component: Meal Time Button
-
+// Meal Time Button 
 struct MealTimeButton: View {
     let meal: MealType
     @Binding var selectedMealType: MealType
