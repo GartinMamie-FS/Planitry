@@ -19,20 +19,34 @@ enum MealType: String, CaseIterable, Identifiable {
 
 // Define possible health constraints (for Toggles in A3)
 enum HealthConstraint: String, CaseIterable, Identifiable {
+    // UI Display Names
     case glutenFree = "Gluten Free"
     case peanutFree = "Peanut Free"
     case dairyFree = "Dairy Free"
     case sugarFree = "Sugar Free"
     case treeNutFree = "Tree Nut Free"
     case alcoholFree = "Alcohol Free"
+    
     var id: String { self.rawValue }
+    
+    // CRITICAL: Computed property for the API-compatible value
+    var apiValue: String {
+        switch self {
+        case .glutenFree: return "gluten-free"
+        case .peanutFree: return "peanut-free"
+        case .dairyFree: return "dairy-free"
+        case .sugarFree: return "sugar-conscious" // Edamam standard for sugar restrictions
+        case .treeNutFree: return "tree-nut-free"
+        case .alcoholFree: return "alcohol-free"
+        }
+    }
 }
 
 
 // Error Enum for NetworkManager
 enum NetworkError: Error, LocalizedError {
     case invalidURL
-    case invalidResponse
+    case invalidResponse(Int?) // <-- NOW CAPTURES THE HTTP STATUS CODE
     case decodingError(Error)
     case noResultsFound
     
@@ -40,8 +54,12 @@ enum NetworkError: Error, LocalizedError {
         switch self {
         case .invalidURL:
             return "The API URL could not be constructed correctly."
-        case .invalidResponse:
-            return "The server returned an invalid response (non-200 status code)."
+        case .invalidResponse(let statusCode):
+            if let code = statusCode {
+                 return "The server returned an error (Status Code: \(code)). This often means invalid API keys or a problematic query."
+            } else {
+                 return "The server returned an invalid response."
+            }
         case .decodingError(let error):
             // Provides more useful information for debugging decoding failures
             return "Failed to decode recipe data: \(error.localizedDescription)"
@@ -50,5 +68,4 @@ enum NetworkError: Error, LocalizedError {
         }
     }
 }
-
 

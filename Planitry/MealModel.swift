@@ -28,12 +28,12 @@ struct MealModel: Decodable, Identifiable {
     }
     
     var calculatedCalories: Int {
-            // If yield is 0, return the total calories, otherwise calculate per serving
-            if yield > 0 {
-                return Int((calories / yield).rounded())
-            }
-            return Int(calories.rounded())
+        // If yield is 0, return the total calories, otherwise calculate per serving
+        if yield > 0 {
+            return Int((calories / yield).rounded())
         }
+        return Int(calories.rounded())
+    }
     
     
     enum CodingKeys: String, CodingKey {
@@ -67,8 +67,13 @@ struct MealModel: Decodable, Identifiable {
     }
 }
 
-// Enum defining all user-selectable diet constraints (both Edamam 'diet' and 'health' types)
-extension MealConstraints {
+// Struct to hold constraints for the API call
+struct MealConstraints {
+    let mealType: String
+    let maxCalories: Int
+    let healthConstraints: [String]
+    
+    // Enum defining all user-selectable diet constraints (both Edamam 'diet' and 'health' types)
     enum DietOption: String, CaseIterable, Identifiable {
         case balanced = "Balanced (Default)"
         
@@ -79,7 +84,7 @@ extension MealConstraints {
         case lowSodium = "Low-Sodium"
         case highFiber = "High-Fiber"
         
-        // Popular diets / Health Labels (these map to &health= internally)
+        // Popular diets / Health Labels (these map to &health= internally in NetworkManager)
         case keto = "Keto-Friendly"
         case vegan = "Vegan"
         case vegetarian = "Vegetarian"
@@ -107,10 +112,4 @@ extension MealConstraints {
             }
         }
     }
-}
-
-struct MealConstraints {
-    let mealType: String
-    let maxCalories: Int
-    let healthConstraints: [String]
 }

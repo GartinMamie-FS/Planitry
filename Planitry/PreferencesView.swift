@@ -7,34 +7,44 @@
 
 import SwiftUI
 
-// MARK: - Preferences View (A3)
 
-// The Preferences View handles all user inputs for dietary and health constraints.
 struct PreferencesView: View {
     // Access the shared settings object
     @ObservedObject var settings: UserSettings
     
+    // Local state to manage toggles (Constraint Toggles)
     @State private var activeConstraints: Set<String>
     
+    // NEW: Local state to represent the selected diet as the ENUM
+    @State private var selectedDietOption: MealConstraints.DietOption
+
     init(settings: UserSettings) {
         self._settings = ObservedObject(wrappedValue: settings)
         
+        // Initialize active constraints from settings
         _activeConstraints = State(initialValue: Set(settings.activeHealthConstraints))
+        
+        // NEW: Initialize the enum state by trying to match the currently saved string.
+        // If it fails (e.g., first run), default to 'balanced'.
+        _selectedDietOption = State(initialValue: MealConstraints.DietOption.allCases.first(where: {
+            $0.apiValue == settings.selectedDiet.lowercased()
+        }) ?? .balanced)
     }
     
     var body: some View {
         NavigationView {
             Form {
-                // Section 1: Dietary Label
+                // MARK: - Section 1: Dietary Label (Now uses the ENUM)
                 Section(header: Text("Dietary Preference (Required)")) {
-                    Picker("Select Diet", selection: $settings.selectedDiet) {
-                        ForEach(["Balanced", "High-Fiber", "High-Protein", "Low-Carb", "Low-Fat", "Low-Sodium"], id: \.self) { diet in
-                            Text(diet)
+                    Picker("Select Diet", selection: $selectedDietOption) {
+                        ForEach(MealConstraints.DietOption.allCases) { dietOption in
+                            Text(dietOption.rawValue)
+                                .tag(dietOption) // Tagging with the enum value
                         }
                     }
                 }
                 
-                // Section 2: Calorie Budget
+                // MARK: - Section 2: Calorie Budget (No Change)
                 Section(header: Text("Maximum Calories (Required)")) {
                     Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
                         HStack {
@@ -47,7 +57,7 @@ struct PreferencesView: View {
                     }
                 }
                 
-                // Section 3: Health Constraints
+                // MARK: - Section 3: Health Constraints (No Change)
                 Section(header: Text("Health Constraints (Optional)")) {
                     ForEach(HealthConstraint.allCases) { constraint in
                         Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
@@ -55,6 +65,13 @@ struct PreferencesView: View {
                 }
             }
             .navigationTitle("Meal Preferences")
+            
+            // NEW: When the local enum changes, save its API-friendly value to AppStorage
+            .onChange(of: selectedDietOption) { newOption in
+                settings.selectedDiet = newOption.apiValue // <--- CRITICAL FIX
+                print("Diet Saved: \(settings.selectedDiet) (API Value)")
+            }
+            
             .onChange(of: activeConstraints) { newConstraints in
                 // When the local set changes, save it back to the persistence string
                 settings.activeHealthConstraintsString = newConstraints.joined(separator: ",")

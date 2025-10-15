@@ -8,7 +8,6 @@
 import Foundation
 import Combine
 
-
 // Top-level structure for Edamam API Response
 struct EdamamResponse: Decodable {
     let hits: [RecipeHit]
@@ -20,13 +19,14 @@ struct RecipeHit: Decodable {
 }
 
 
-// MARK: - 3. NETWORK MANAGER (With robust decoding logic)
+// MARK: NETWORK MANAGER (With robust decoding logic)
 
 class NetworkManager: ObservableObject {
     @Published var isFetching = false
     
+
     private let appId = "1192bcde"
-    private let appKey = "36ac638997aa0fb4e635a73c25788f24"
+    private let appKey = "0b487c1c405fc2c0e5d4852e1da64d08"
 
     /// Fetches a random meal from the Edamam API based on user constraints.
     func fetchMeal(for constraints: MealConstraints, selectedDiet: String) async -> Result<MealModel, NetworkError> {
@@ -45,8 +45,7 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidURL)
         }
         
-        // Prepare the health constraints string for URL query (e.g., "gluten free" -> "gluten%20free")
-        let healthQuery = constraints.healthConstraints.map { $0.lowercased().replacingOccurrences(of: " ", with: "%20") }.joined(separator: "&health=")
+        // Removed the unnecessary 'healthQuery' variable here as it's not used.
         
         // 2. Build Query Items
         var queryItems = [
@@ -55,7 +54,7 @@ class NetworkManager: ObservableObject {
             URLQueryItem(name: "app_id", value: appId),
             URLQueryItem(name: "app_key", value: appKey),
             URLQueryItem(name: "mealType", value: constraints.mealType.lowercased()),
-            URLQueryItem(name: "calories", value: "0-\(constraints.maxCalories * 2)"), // API uses total recipe calories, we multiply maxCalories (per serving) by 2 for a buffer.
+            URLQueryItem(name: "calories", value: "0-\(constraints.maxCalories * 2)"),
             URLQueryItem(name: "diet", value: selectedDiet.lowercased()),
             URLQueryItem(name: "random", value: "true")
         ]
@@ -63,6 +62,7 @@ class NetworkManager: ObservableObject {
         // Add health constraints separately if they exist
         if !constraints.healthConstraints.isEmpty {
             for constraint in constraints.healthConstraints {
+                // Ensure the constraint is formatted correctly (e.g., "gluten-free")
                 queryItems.append(URLQueryItem(name: "health", value: constraint.lowercased().replacingOccurrences(of: " ", with: "-")))
             }
         }
@@ -82,26 +82,27 @@ class NetworkManager: ObservableObject {
         // 3. Perform the Fetch
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
-            
+              
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                return .failure(.invalidResponse)
+                let statusCode = (response as? HTTPURLResponse)?.statusCode
+                return .failure(.invalidResponse(statusCode))
             }
-            
+              
             // 4. Decode the Response
             let decodedResponse = try JSONDecoder().decode(EdamamResponse.self, from: data)
-            
+              
             guard let hit = decodedResponse.hits.first else {
                 return .failure(.noResultsFound)
             }
-            
+              
             return .success(hit.recipe)
-            
+              
         } catch let decodingError as DecodingError {
             print("Decoding Error: \(decodingError)")
             return .failure(.decodingError(decodingError))
         } catch {
             print("Unknown Network Error: \(error.localizedDescription)")
-            return .failure(.invalidResponse)
+            return .failure(.invalidResponse(nil))
         }
     }
 }
