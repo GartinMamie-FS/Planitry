@@ -45,15 +45,23 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidURL)
         }
         
-        // Removed the unnecessary 'healthQuery' variable here as it's not used.
+        // Determine the correct Edamam API mealType value based on the user's selection.
+        let edamamMealType: String
         
+        if constraints.mealType.lowercased().contains("breakfast") {
+            edamamMealType = "breakfast"
+        } else {
+            edamamMealType = "lunch/dinner"
+        }
+  
         // 2. Build Query Items
         var queryItems = [
             URLQueryItem(name: "type", value: "public"),
             URLQueryItem(name: "q", value: "recipe"),
             URLQueryItem(name: "app_id", value: appId),
             URLQueryItem(name: "app_key", value: appKey),
-            URLQueryItem(name: "mealType", value: constraints.mealType.lowercased()),
+            URLQueryItem(name: "mealType", value: edamamMealType),
+            
             URLQueryItem(name: "calories", value: "0-\(constraints.maxCalories * 2)"),
             URLQueryItem(name: "diet", value: selectedDiet.lowercased()),
             URLQueryItem(name: "random", value: "true")
@@ -62,7 +70,6 @@ class NetworkManager: ObservableObject {
         // Add health constraints separately if they exist
         if !constraints.healthConstraints.isEmpty {
             for constraint in constraints.healthConstraints {
-                // Ensure the constraint is formatted correctly (e.g., "gluten-free")
                 queryItems.append(URLQueryItem(name: "health", value: constraint.lowercased().replacingOccurrences(of: " ", with: "-")))
             }
         }
@@ -76,27 +83,28 @@ class NetworkManager: ObservableObject {
         print("\n*** API Request URL ***")
         print("Final URL: \(url.absoluteString)")
         print("Final Diet Parameter: \(selectedDiet)")
+        print("Final MealType Parameter (Edamam): \(edamamMealType)") // Added this line for visibility
         print("Final Health Constraints: \(constraints.healthConstraints.joined(separator: ", "))")
         print("Total Recipe Calorie Limit: 0-\(constraints.maxCalories * 2)")
         
         // 3. Perform the Fetch
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
-              
+                
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 let statusCode = (response as? HTTPURLResponse)?.statusCode
                 return .failure(.invalidResponse(statusCode))
             }
-              
+                
             // 4. Decode the Response
             let decodedResponse = try JSONDecoder().decode(EdamamResponse.self, from: data)
-              
+                
             guard let hit = decodedResponse.hits.first else {
                 return .failure(.noResultsFound)
             }
-              
+                
             return .success(hit.recipe)
-              
+                
         } catch let decodingError as DecodingError {
             print("Decoding Error: \(decodingError)")
             return .failure(.decodingError(decodingError))
