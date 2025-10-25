@@ -14,7 +14,7 @@ struct PlannerView: View {
     @State private var selectedMealType: MealType = .breakfast
     
     // 2. Access to Global Preferences
-    @ObservedObject var settings: UserSettings
+    @EnvironmentObject var settings: UserSettings
     
     // 3. Network Manager and Navigation State
     @StateObject private var networkManager = NetworkManager()
@@ -153,7 +153,7 @@ struct PlannerView: View {
                         Text("Max Calories (Recipe Est.):")
                             .fontWeight(.medium)
                         Spacer()
-                        Text("\(settings.maxCalories * 2) kcal")
+                        Text("\(settings.maxCalories / 3) kcal")
                             .foregroundColor(primaryColor)
                     }
                 }

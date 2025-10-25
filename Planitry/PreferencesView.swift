@@ -10,42 +10,29 @@ import SwiftUI
 
 struct PreferencesView: View {
     // Access the shared settings object
-    @ObservedObject var settings: UserSettings
+    @EnvironmentObject var settings: UserSettings
     
-    // Local state to manage toggles (Constraint Toggles)
-    @State private var activeConstraints: Set<String>
+    // FIX 1: Provide default values to allow the default initializer to work.
+    @State private var activeConstraints: Set<String> = []
     
-    // NEW: Local state to represent the selected diet as the ENUM
-    @State private var selectedDietOption: MealConstraints.DietOption
-
-    init(settings: UserSettings) {
-        self._settings = ObservedObject(wrappedValue: settings)
-        
-        // Initialize active constraints from settings
-        _activeConstraints = State(initialValue: Set(settings.activeHealthConstraints))
-        
-        // NEW: Initialize the enum state by trying to match the currently saved string.
-        // If it fails (e.g., first run), default to 'balanced'.
-        _selectedDietOption = State(initialValue: MealConstraints.DietOption.allCases.first(where: {
-            $0.apiValue == settings.selectedDiet.lowercased()
-        }) ?? .balanced)
-    }
+    // FIX 1: Provide default values to allow the default initializer to work.
+    @State private var selectedDietOption: MealConstraints.DietOption = .balanced
     
     var body: some View {
         NavigationView {
             Form {
-                // MARK: - Section 1: Dietary Label (Now uses the ENUM)
+                // MARK: - Section 1: Dietary Label
                 Section(header: Text("Dietary Preference (Required)")) {
                     Picker("Select Diet", selection: $selectedDietOption) {
                         ForEach(MealConstraints.DietOption.allCases) { dietOption in
                             Text(dietOption.rawValue)
-                                .tag(dietOption) // Tagging with the enum value
+                                .tag(dietOption)
                         }
                     }
                 }
                 
-                // MARK: - Section 2: Calorie Budget (No Change)
-                Section(header: Text("Maximum Calories (Required)")) {
+                // MARK: - Section 2: Calorie Budget
+                Section(header: Text("Maximum Calories Daily (Required)")) {
                     Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
                         HStack {
                             Text("Max Calories:")
@@ -57,7 +44,7 @@ struct PreferencesView: View {
                     }
                 }
                 
-                // MARK: - Section 3: Health Constraints (No Change)
+                // MARK: - Section 3: Health Constraints
                 Section(header: Text("Health Constraints (Optional)")) {
                     ForEach(HealthConstraint.allCases) { constraint in
                         Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
@@ -66,14 +53,25 @@ struct PreferencesView: View {
             }
             .navigationTitle("Meal Preferences")
             
-            // NEW: When the local enum changes, save its API-friendly value to AppStorage
+            // FIX 2: Use .onAppear to load the state from the EnvironmentObject *after* the view is initialized.
+            .onAppear {
+                // 1. Load constraints from settings string into local Set
+                let currentConstraints = settings.activeHealthConstraintsString.split(separator: ",").map { String($0) }
+                self.activeConstraints = Set(currentConstraints)
+                
+                // 2. Load selected diet from settings string into local Enum
+                self.selectedDietOption = MealConstraints.DietOption.allCases.first(where: {
+                    $0.apiValue == settings.selectedDiet.lowercased()
+                }) ?? .balanced
+            }
+            
+            // Sync local state back to persistence layer when it changes
             .onChange(of: selectedDietOption) { newOption in
-                settings.selectedDiet = newOption.apiValue // <--- CRITICAL FIX
+                settings.selectedDiet = newOption.apiValue
                 print("Diet Saved: \(settings.selectedDiet) (API Value)")
             }
             
             .onChange(of: activeConstraints) { newConstraints in
-                // When the local set changes, save it back to the persistence string
                 settings.activeHealthConstraintsString = newConstraints.joined(separator: ",")
                 print("Constraints Saved: \(settings.activeHealthConstraintsString)")
             }
