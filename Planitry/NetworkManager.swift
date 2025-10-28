@@ -24,10 +24,12 @@ struct RecipeHit: Decodable {
 class NetworkManager: ObservableObject {
     @Published var isFetching = false
     
-
+    // User's provided Edamam Credentials
     private let appId = "1192bcde"
     private let appKey = "0b487c1c405fc2c0e5d4852e1da64d08"
+    private let baseURL = "https://api.edamam.com/api/recipes/v2"
 
+    // --- USER'S ORIGINAL FUNCTION (Left unchanged) ---
     /// Fetches a random meal from the Edamam API based on user constraints.
     func fetchMeal(for constraints: MealConstraints, selectedDiet: String) async -> Result<MealModel, NetworkError> {
         // Set loading state
@@ -41,7 +43,7 @@ class NetworkManager: ObservableObject {
         }
         
         // 1. Construct the URL
-        guard var components = URLComponents(string: "https://api.edamam.com/api/recipes/v2") else {
+        guard var components = URLComponents(string: baseURL) else {
             return .failure(.invalidURL)
         }
         
@@ -53,11 +55,11 @@ class NetworkManager: ObservableObject {
         } else {
             edamamMealType = "lunch/dinner"
         }
-  
+        
         // 2. Build Query Items
         var queryItems = [
             URLQueryItem(name: "type", value: "public"),
-            URLQueryItem(name: "q", value: "recipe"),
+            URLQueryItem(name: "q", value: "recipe"), // Searches for general recipes
             URLQueryItem(name: "app_id", value: appId),
             URLQueryItem(name: "app_key", value: appKey),
             URLQueryItem(name: "mealType", value: edamamMealType),
@@ -80,12 +82,87 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidURL)
         }
         
-        print("\n*** API Request URL ***")
+        print("\n*** API Request URL (Meal Planner) ***")
         print("Final URL: \(url.absoluteString)")
-        print("Final Diet Parameter: \(selectedDiet)")
-        print("Final MealType Parameter (Edamam): \(edamamMealType)") // Added this line for visibility
-        print("Final Health Constraints: \(constraints.healthConstraints.joined(separator: ", "))")
-        print("Total Recipe Calorie Limit: 0-\(constraints.maxCalories * 2)")
+        
+        // 3. Perform the Fetch
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+                
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode
+                return .failure(.invalidResponse(statusCode))
+            }
+                
+            // 4. Decode the Response
+            let decodedResponse = try JSONDecoder().decode(EdamamResponse.self, from: data)
+                
+            guard let hit = decodedResponse.hits.first else {
+                return .failure(.noResultsFound)
+            }
+                
+            return .success(hit.recipe)
+                
+        } catch let decodingError as DecodingError {
+            print("Decoding Error: \(decodingError)")
+            return .failure(.decodingError(decodingError))
+        } catch {
+            print("Unknown Network Error: \(error.localizedDescription)")
+            return .failure(.invalidResponse(nil))
+        }
+    }
+    
+    // --- NEW INVENTORY SEARCH FUNCTION ---
+    
+    /// Fetches a random meal from the Edamam API using the list of ingredients as the query.
+    func fetchRecipeByInventory(ingredients: [String]) async -> Result<MealModel, NetworkError> {
+        // Set loading state
+        await MainActor.run { isFetching = true }
+
+        defer {
+            // Ensure loading state is turned off when function exits
+            Task { @MainActor in
+                isFetching = false
+            }
+        }
+        
+        // 1. Construct the URL
+        guard var components = URLComponents(string: baseURL) else {
+            return .failure(.invalidURL)
+        }
+        
+        // Edamam uses the 'q' parameter for the search query, which can be a comma-separated list.
+        let ingredientQuery = ingredients.map { $0.lowercased() }.joined(separator: ", ")
+        
+        // 2. Build Query Items (using only essential and query parameters)
+        let queryItems = [
+            URLQueryItem(name: "type", value: "public"),
+            // Use the list of ingredients as the main query
+            URLQueryItem(name: "q", value: ingredientQuery),
+            URLQueryItem(name: "app_id", value: appId),
+            URLQueryItem(name: "app_key", value: appKey),
+            // We want one random recipe based on the ingredients
+            URLQueryItem(name: "random", value: "true"),
+            URLQueryItem(name: "field", value: "label"), // Optimize by requesting minimum fields
+            URLQueryItem(name: "field", value: "image"),
+            URLQueryItem(name: "field", value: "url"),
+            URLQueryItem(name: "field", value: "source"),
+            URLQueryItem(name: "field", value: "ingredientLines"),
+            URLQueryItem(name: "field", value: "calories"),
+            URLQueryItem(name: "field", value: "totalTime"),
+            URLQueryItem(name: "field", value: "yield"),
+            URLQueryItem(name: "field", value: "uri"),
+        ]
+
+        components.queryItems = queryItems
+        
+        guard let url = components.url else {
+            return .failure(.invalidURL)
+        }
+        
+        print("\n*** API Request URL (Inventory Finder) ***")
+        print("Search Query: \(ingredientQuery)")
+        print("Final URL: \(url.absoluteString)")
         
         // 3. Perform the Fetch
         do {

@@ -69,3 +69,20 @@ enum NetworkError: Error, LocalizedError {
     }
 }
 
+struct Ingredient: Identifiable, Codable, Equatable {
+    let id = UUID()
+    let name: String
+    var quantity: Double
+    var unit: String
+    
+    // Helper for normalizing the ingredient name for duplicate checking
+    var normalizedName: String {
+        name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+struct NutrientModel: Decodable {
+    let label: String
+    let quantity: Double
+    let unit: String
+}

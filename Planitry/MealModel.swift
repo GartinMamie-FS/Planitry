@@ -17,12 +17,15 @@ struct MealModel: Decodable, Identifiable {
     let source: String
     let yield: Double
     let calories: Double
-    let mealType: [String]
-    let dietLabels: [String]
-    let healthLabels: [String]
+    let mealType: [String]?
+    let dietLabels: [String]?
+    let healthLabels: [String]?
     let ingredients: [String]
     
-    // Computed property for easy access, required by ResultsView
+    // PROPERTIES RE-ADDED: Required by ResultsView in previous iterations
+    let totalTime: Double
+    
+    // Computed property for easy access
     var ingredientCount: Int {
         return ingredients.count
     }
@@ -37,13 +40,30 @@ struct MealModel: Decodable, Identifiable {
     
     
     enum CodingKeys: String, CodingKey {
-        case label, url, yield, calories, mealType, dietLabels, healthLabels, source
+        case label, url, yield, calories, mealType, dietLabels, healthLabels, source, totalTime, totalNutrients // Added totalTime, totalNutrients
         case uri
         case image = "image"
         case ingredientLines = "ingredientLines"
     }
     
-    // Custom initializer to handle API structure and ID/Renaming
+    // FIX 1: CUSTOM CONVENIENCE INITIALIZER (To fix the error in performRecipeSearch)
+    // This initializer is manually added back so the dummy data creation works.
+    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String], dietLabels: [String], healthLabels: [String], ingredients: [String], totalTime: Double, totalNutrients: [String: NutrientModel]) {
+        self.id = id
+        self.label = label
+        self.imageUrl = imageUrl
+        self.url = url
+        self.source = source
+        self.yield = yield
+        self.calories = calories
+        self.mealType = mealType
+        self.dietLabels = dietLabels
+        self.healthLabels = healthLabels
+        self.ingredients = ingredients
+        self.totalTime = totalTime
+    }
+    
+    // Custom initializer to handle API structure and ID/Renaming (The Decodable required init)
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.label = try container.decode(String.self, forKey: .label)
@@ -52,10 +72,15 @@ struct MealModel: Decodable, Identifiable {
         self.source = try container.decode(String.self, forKey: .source)
         self.yield = try container.decode(Double.self, forKey: .yield)
         self.calories = try container.decode(Double.self, forKey: .calories)
-        self.mealType = try container.decode([String].self, forKey: .mealType)
-        self.dietLabels = try container.decode([String].self, forKey: .dietLabels)
-        self.healthLabels = try container.decode([String].self, forKey: .healthLabels)
+        self.mealType = try container.decodeIfPresent([String].self, forKey: .mealType)
+        self.dietLabels = try container.decodeIfPresent([String].self, forKey: .dietLabels)
+        self.healthLabels = try container.decodeIfPresent([String].self, forKey: .healthLabels)
+
         self.ingredients = try container.decode([String].self, forKey: .ingredientLines)
+        
+        // Decoding re-added properties
+        self.totalTime = try container.decode(Double.self, forKey: .totalTime)
+
 
         // The 'id' is extracted from the 'uri'
         let uri = try container.decode(String.self, forKey: .uri)

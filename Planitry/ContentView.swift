@@ -37,6 +37,16 @@ struct ContentView: View {
                         .tabItem {
                             Label("Planner", systemImage: "fork.knife")
                         }
+                    // Tab 2: Inventory
+                    InventoryView()
+                        .tabItem {
+                            Label("Inventory", systemImage: "archivebox.fill")
+                        }
+                    // Tab 3: Grocery List
+                    GroceryListView()
+                        .tabItem {
+                            Label("Grocery List", systemImage: "list.bullet.clipboard.fill")
+                        }
                     
                     // Tab 2: Preferences
                     PreferencesView()
