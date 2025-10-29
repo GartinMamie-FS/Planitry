@@ -20,6 +20,7 @@ struct ContentView: View {
             Ingredient(name: "butter", quantity: 0.5, unit: "stick"),
             Ingredient(name: "sugar", quantity: 2, unit: "tbsp")
         ]
+    @StateObject var listManager = GroceryListManager()
     
     var body: some View {
         
@@ -61,6 +62,7 @@ struct ContentView: View {
                         }
                 }
                 .accentColor(Color(red: 0.8, green: 0.2, blue: 0.1))
+                .environmentObject(listManager)
                 
                 .fullScreenCover(isPresented: .constant(!settings.hasCompletedOnboarding)) {
                     OnboardingFlowView()

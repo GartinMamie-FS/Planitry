@@ -14,9 +14,30 @@ import SwiftUI
 struct ResultsView: View {
     
     @Environment(\.openURL) var openURL
+    @EnvironmentObject var listManager: GroceryListManager // Inject the manager
     
     let meal: MealModel
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
+
+    // State for visual feedback when an item is added
+    @State private var addedItemName: String? = nil
+    @State private var showSuccessMessage = false
+
+    // MARK: - Helper Function
+    private func addIngredientToList(ingredient: String) {
+        listManager.addItem(ingredientName: ingredient)
+        
+        // Show brief success feedback
+        addedItemName = ingredient
+        showSuccessMessage = true
+        
+        // Hide the message after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showSuccessMessage = false
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -70,19 +91,37 @@ struct ResultsView: View {
                     Divider()
                     
                     // MARK: - Ingredients List
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Ingredients (\(meal.ingredientCount)):")
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("Ingredients (\(meal.ingredientCount))")
                             .font(.headline)
                         
-                        // Display the list of ingredients
+                        // Display the list of ingredients with 'Add to List' functionality
                         ForEach(meal.ingredients, id: \.self) { ingredient in
                             HStack(alignment: .top) {
                                 Image(systemName: "circle.fill")
                                     .font(.system(size: 8))
                                     .foregroundColor(primaryColor)
                                     .padding(.top, 5)
+                                
                                 Text(ingredient)
                                     .font(.body)
+                                
+                                Spacer()
+                                
+                                // NEW: Button to add the ingredient to the grocery list
+                                Button(action: {
+                                    addIngredientToList(ingredient: ingredient)
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "cart.badge.plus")
+                                            .font(.callout)
+                                    }
+                                    .foregroundColor(.blue)
+                                    .padding(8)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(PlainButtonStyle()) // Ensure tap target is clean
                             }
                         }
                     }
@@ -118,5 +157,25 @@ struct ResultsView: View {
         .edgesIgnoringSafeArea(.top)
         .navigationTitle("Your Meal Idea")
         .navigationBarTitleDisplayMode(.inline)
+        // MARK: - Success Message Overlay
+        .overlay(
+            VStack {
+                if showSuccessMessage {
+                    Text("Added to Grocery List!")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 15)
+                        .background(Color.green.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                }
+                Spacer()
+            }
+            .padding(.top, 20)
+            , alignment: .top
+        )
     }
 }
