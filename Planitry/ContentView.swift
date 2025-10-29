@@ -11,6 +11,8 @@ import Combine
 struct ContentView: View {
     // Instantiates the UserSettings model once and makes it available to the environment.
     @StateObject var settings = UserSettings()
+    @StateObject private var inventoryManager = InventoryManager()
+        
     
     // State to control whether the splash screen is visible
     @State private var isLoading = true
@@ -45,7 +47,7 @@ struct ContentView: View {
                             Label("Planner", systemImage: "fork.knife")
                         }
                     // Tab 2: Inventory
-                    InventoryView(inventory: $inventory)
+                    InventoryView(manager: inventoryManager)
                         .tabItem {
                             Label("Inventory", systemImage: "archivebox.fill")
                         }

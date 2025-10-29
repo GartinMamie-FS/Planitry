@@ -74,6 +74,7 @@ struct Ingredient: Identifiable, Codable, Equatable {
     let name: String
     var quantity: Double
     var unit: String
+    let dateAdded = Date()
     
     // Helper for normalizing the ingredient name for duplicate checking
     var normalizedName: String {

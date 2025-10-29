@@ -8,8 +8,8 @@ import SwiftUI
 import Combine
 
 struct RecipeFinderView: View {
-    // Inventory is passed as a binding
-    @Binding var inventory: [Ingredient]
+    // FIX 1: Change to accept the manager object directly via @ObservedObject
+    @ObservedObject var manager: InventoryManager
     
     @State private var foundMeal: MealModel? = nil
     @State private var isLoading: Bool = false
@@ -60,7 +60,8 @@ struct RecipeFinderView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    Text("Your inventory has \(inventory.count) ingredients. Tap the button below to start the search!")
+                    // FIX 2: Use manager.inventory.count
+                    Text("Your inventory has \(manager.inventory.count) ingredients. Tap the button below to start the search!")
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
@@ -70,13 +71,15 @@ struct RecipeFinderView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(inventory.isEmpty ? Color.gray : primaryColor)
+                    // FIX 3: Check manager.inventory.isEmpty
+                    .background(manager.inventory.isEmpty ? Color.gray : primaryColor)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                     .padding(.horizontal)
-                    .disabled(inventory.isEmpty)
+                    .disabled(manager.inventory.isEmpty)
                     
-                    if inventory.isEmpty {
+                    // FIX 4: Check manager.inventory.isEmpty
+                    if manager.inventory.isEmpty {
                         Text("Add ingredients in the Inventory tab first!")
                             .font(.caption)
                             .foregroundColor(.red)
@@ -88,10 +91,11 @@ struct RecipeFinderView: View {
         .navigationTitle("Find Recipes")
     }
     
-    // MARK: - Networking Logic (Updated to use the Edamam API)
+    // MARK: - Networking Logic
     
     private func performRecipeSearch() {
-        guard !inventory.isEmpty else {
+        // FIX 5: Use manager.inventory
+        guard !manager.inventory.isEmpty else {
             self.errorMessage = "Your inventory is empty. Please add ingredients before searching."
             return
         }
@@ -101,7 +105,8 @@ struct RecipeFinderView: View {
         errorMessage = nil
         foundMeal = nil
         
-        let ingredientNames = inventory.map { $0.name.lowercased() }
+        // FIX 6: Use manager.inventory
+        let ingredientNames = manager.inventory.map { $0.name.lowercased() }
         let networkManager = NetworkManager()
         
         // 2. Start the asynchronous network call

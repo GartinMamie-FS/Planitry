@@ -8,7 +8,8 @@ import SwiftUI
 import Combine
 
 struct InventoryView: View {
-    @Binding var inventory: [Ingredient]
+    // 🔑 Use @ObservedObject to watch for changes in the manager passed from the parent
+    @ObservedObject var manager: InventoryManager
     
     @State private var newIngredientName: String = ""
     @State private var newIngredientQuantity: String = ""
@@ -16,7 +17,7 @@ struct InventoryView: View {
     
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
-    // MARK: - Add/Delete Logic
+    // MARK: - Add/Delete Logic (Simplified to call manager)
     
     private func addIngredient() {
         guard let quantity = Double(newIngredientQuantity.trimmingCharacters(in: .whitespaces)),
@@ -24,12 +25,11 @@ struct InventoryView: View {
             return
         }
         
-        let newIngredient = Ingredient(
-            name: newIngredientName.trimmingCharacters(in: .whitespaces),
+        manager.addIngredient(
+            name: newIngredientName,
             quantity: quantity,
-            unit: newIngredientUnit.trimmingCharacters(in: .whitespaces)
+            unit: newIngredientUnit
         )
-        inventory.append(newIngredient)
         
         // Reset fields
         newIngredientName = ""
@@ -38,7 +38,7 @@ struct InventoryView: View {
     }
     
     private func deleteIngredients(offsets: IndexSet) {
-        inventory.remove(atOffsets: offsets)
+        manager.deleteIngredients(offsets: offsets)
     }
     
     // MARK: - View Body
@@ -108,14 +108,15 @@ struct InventoryView: View {
                 
                 // MARK: - Current Inventory List Card
                 VStack(alignment: .leading) {
-                    Text("YOUR CURRENT INVENTORY (\(inventory.count))")
+                    Text("YOUR CURRENT INVENTORY (\(manager.inventory.count))")
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.gray)
                         .padding(.leading, 5)
                     
                     List {
-                        ForEach(inventory) { item in
+                        // 🔑 Iterate over the manager's published array
+                        ForEach(manager.inventory) { item in
                             HStack {
                                 Text(item.name.capitalized)
                                     .fontWeight(.medium)
@@ -132,8 +133,9 @@ struct InventoryView: View {
                 .padding(.horizontal)
                 
                 // MARK: - Action Button
-                if !inventory.isEmpty {
-                    NavigationLink(destination: RecipeFinderView(inventory: $inventory)) {
+                if !manager.inventory.isEmpty {
+                    // 🔑 Pass the manager to the next view
+                    NavigationLink(destination: RecipeFinderView(manager: manager)) {
                         Text("Find Recipes")
                             .font(.headline)
                             .foregroundColor(.white)
