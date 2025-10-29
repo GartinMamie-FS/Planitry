@@ -15,6 +15,12 @@ struct ContentView: View {
     // State to control whether the splash screen is visible
     @State private var isLoading = true
     
+    @State private var inventory: [Ingredient] = [
+            Ingredient(name: "milk", quantity: 1, unit: "cup"),
+            Ingredient(name: "butter", quantity: 0.5, unit: "stick"),
+            Ingredient(name: "sugar", quantity: 2, unit: "tbsp")
+        ]
+    
     var body: some View {
         
         ZStack {
@@ -38,7 +44,7 @@ struct ContentView: View {
                             Label("Planner", systemImage: "fork.knife")
                         }
                     // Tab 2: Inventory
-                    InventoryView()
+                    InventoryView(inventory: $inventory)
                         .tabItem {
                             Label("Inventory", systemImage: "archivebox.fill")
                         }
