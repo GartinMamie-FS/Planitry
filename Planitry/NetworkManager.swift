@@ -28,12 +28,12 @@ class NetworkManager: ObservableObject {
     private let appId = "1192bcde"
     private let appKey = "0b487c1c405fc2c0e5d4852e1da64d08"
     private let baseURL = "https://api.edamam.com/api/recipes/v2"
-
-
+    
+    
     func fetchMeal(for constraints: MealConstraints, selectedDiet: String) async -> Result<MealModel, NetworkError> {
         // Set loading state
         await MainActor.run { isFetching = true }
-
+        
         defer {
             // Ensure loading state is turned off when function exits
             Task { @MainActor in
@@ -74,7 +74,7 @@ class NetworkManager: ObservableObject {
                 queryItems.append(URLQueryItem(name: "health", value: constraint.lowercased().replacingOccurrences(of: " ", with: "-")))
             }
         }
-
+        
         components.queryItems = queryItems
         
         guard let url = components.url else {
@@ -87,21 +87,21 @@ class NetworkManager: ObservableObject {
         // 3. Perform the Fetch
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
-                
+            
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 let statusCode = (response as? HTTPURLResponse)?.statusCode
                 return .failure(.invalidResponse(statusCode))
             }
-                
+            
             // 4. Decode the Response
             let decodedResponse = try JSONDecoder().decode(EdamamResponse.self, from: data)
-                
+            
             guard let hit = decodedResponse.hits.first else {
                 return .failure(.noResultsFound)
             }
-                
+            
             return .success(hit.recipe)
-                
+            
         } catch let decodingError as DecodingError {
             print("Decoding Error: \(decodingError)")
             return .failure(.decodingError(decodingError))
@@ -110,12 +110,12 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidResponse(nil))
         }
     }
-        
+    
     /// Fetches a random meal from the Edamam API using the list of ingredients as the query.
-    func fetchRecipeByInventory(ingredients: [String]) async -> Result<MealModel, NetworkError> {
+    func fetchRecipeByInventory(ingredients: [String], constraints: MealConstraints, selectedDiet: String) async -> Result<MealModel, NetworkError> {
         // Set loading state
         await MainActor.run { isFetching = true }
-
+        
         defer {
             // Ensure loading state is turned off when function exits
             Task { @MainActor in
@@ -128,19 +128,26 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidURL)
         }
         
-        // Edamam uses the 'q' parameter for the search query, which can be a comma-separated list.
+        // Edamam uses the 'q' parameter for the search query, which can be a space-separated list.
         let ingredientQuery = ingredients.map { $0.lowercased() }.joined(separator: " ")
         
-        // 2. Build Query Items (using only essential and query parameters)
-        let queryItems = [
+        // 2. Build Query Items (now including diet, calories, and random flag)
+        var queryItems = [
             URLQueryItem(name: "type", value: "public"),
             // Use the list of ingredients as the main query
             URLQueryItem(name: "q", value: ingredientQuery),
             URLQueryItem(name: "app_id", value: appId),
             URLQueryItem(name: "app_key", value: appKey),
-            // We want one random recipe based on the ingredients
+            
+            // --- ADDED CONSTRAINTS HERE ---
+            URLQueryItem(name: "calories", value: "0-\(constraints.maxCalories * 2)"),
+            URLQueryItem(name: "diet", value: selectedDiet.lowercased()),
+            // -----------------------------
+            
+            // We want one random recipe based on the ingredients and constraints
             URLQueryItem(name: "random", value: "true"),
-            URLQueryItem(name: "field", value: "label"), // Optimize by requesting minimum fields
+            // Optimize by requesting minimum fields
+            URLQueryItem(name: "field", value: "label"),
             URLQueryItem(name: "field", value: "image"),
             URLQueryItem(name: "field", value: "url"),
             URLQueryItem(name: "field", value: "source"),
@@ -150,7 +157,15 @@ class NetworkManager: ObservableObject {
             URLQueryItem(name: "field", value: "yield"),
             URLQueryItem(name: "field", value: "uri"),
         ]
-
+        
+        // Add health constraints separately if they exist
+        if !constraints.healthConstraints.isEmpty {
+            for constraint in constraints.healthConstraints {
+                // Edamam requires health constraints to be hyphenated and lowercase (e.g., "sugar-free")
+                queryItems.append(URLQueryItem(name: "health", value: constraint.lowercased().replacingOccurrences(of: " ", with: "-")))
+            }
+        }
+        
         components.queryItems = queryItems
         
         guard let url = components.url else {
@@ -164,21 +179,21 @@ class NetworkManager: ObservableObject {
         // 3. Perform the Fetch
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
-                
+            
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 let statusCode = (response as? HTTPURLResponse)?.statusCode
                 return .failure(.invalidResponse(statusCode))
             }
-                
+            
             // 4. Decode the Response
             let decodedResponse = try JSONDecoder().decode(EdamamResponse.self, from: data)
-                
+            
             guard let hit = decodedResponse.hits.first else {
                 return .failure(.noResultsFound)
             }
-                
+            
             return .success(hit.recipe)
-                
+            
         } catch let decodingError as DecodingError {
             print("Decoding Error: \(decodingError)")
             return .failure(.decodingError(decodingError))
