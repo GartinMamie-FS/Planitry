@@ -9,10 +9,14 @@ import Combine
 
 struct RecipeFinderView: View {
     @ObservedObject var manager: InventoryManager
+    @EnvironmentObject var settings: UserSettings
     
     @State private var foundMeal: MealModel? = nil
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
+    
+    let constraints: MealConstraints
+    let selectedDiet: String
     
     let primaryColor = Color(red: 0.1, green: 0.5, blue: 0.1)
     
@@ -76,7 +80,7 @@ struct RecipeFinderView: View {
                     .padding(.horizontal)
                     .disabled(manager.inventory.isEmpty)
                     
-            
+                    
                     if manager.inventory.isEmpty {
                         Text("Add ingredients in the Inventory tab first!")
                             .font(.caption)
@@ -97,7 +101,6 @@ struct RecipeFinderView: View {
             return
         }
         
-        // 1. Reset state
         isLoading = true
         errorMessage = nil
         foundMeal = nil
@@ -105,22 +108,27 @@ struct RecipeFinderView: View {
         let ingredientNames = manager.inventory.map { $0.name.lowercased() }
         let networkManager = NetworkManager()
         
-        // 2. Start the asynchronous network call
         Task {
-            // Await the result from the dedicated inventory search method
-            let result = await networkManager.fetchRecipeByInventory(ingredients: ingredientNames)
+            // NOTE: The call below now matches the revised NetworkManager function signature
+            let result = await networkManager.fetchRecipeByInventory(
+                ingredients: ingredientNames,
+                maxCalories: Int(settings.maxCalories), // Used directly
+                selectedDiet: settings.selectedDiet, // Used directly
+                healthConstraints: settings.activeHealthConstraints // Used directly
+            )
             
-            // 3. Update UI state on the MainActor
             await MainActor.run {
                 self.isLoading = false
                 
                 switch result {
                 case .success(let meal):
                     self.foundMeal = meal
-                    self.errorMessage = nil // Clear error on success
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    self.foundMeal = nil // Clear meal on failure
+                    if let networkError = error as? NetworkError {
+                        self.errorMessage = networkError.localizedDescription
+                    } else {
+                        self.errorMessage = error.localizedDescription
+                    }
                 }
             }
         }

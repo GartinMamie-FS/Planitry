@@ -9,14 +9,18 @@ import Combine
 
 struct InventoryView: View {
     @ObservedObject var manager: InventoryManager
+    @EnvironmentObject var settings: UserSettings
     
     @State private var newIngredientName: String = ""
     @State private var newIngredientQuantity: String = ""
     @State private var newIngredientUnit: String = ""
     
+    @State private var recipeConstraints: String = ""
+    @State private var selectedDiet: String = ""
+    
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
-    // MARK: - Add/Delete Logic (Simplified to call manager)
+    // MARK: - Add/Delete Logic
     
     private func addIngredient() {
         guard let quantity = Double(newIngredientQuantity.trimmingCharacters(in: .whitespaces)),
@@ -105,6 +109,7 @@ struct InventoryView: View {
                 .shadow(radius: 3)
                 .padding(.horizontal)
                 
+                
                 // MARK: - Current Inventory List Card
                 VStack(alignment: .leading) {
                     Text("YOUR CURRENT INVENTORY (\(manager.inventory.count))")
@@ -114,7 +119,6 @@ struct InventoryView: View {
                         .padding(.leading, 5)
                     
                     List {
-                        // 🔑 Iterate over the manager's published array
                         ForEach(manager.inventory) { item in
                             HStack {
                                 Text(item.name.capitalized)
@@ -133,8 +137,24 @@ struct InventoryView: View {
                 
                 // MARK: - Action Button
                 if !manager.inventory.isEmpty {
-                    // 🔑 Pass the manager to the next view
-                    NavigationLink(destination: RecipeFinderView(manager: manager)) {
+                    
+                    // 1. Combine selected diet (if any) and custom constraints string into the required [String] array.
+                    let healthConsArray = ([selectedDiet] + recipeConstraints.split(separator: ",")
+                        .map { String($0.trimmingCharacters(in: .whitespaces)) })
+                        .filter { !$0.isEmpty }
+                    
+                    // 2. Instantiate MealConstraints with the required parameters
+                    NavigationLink(destination: RecipeFinderView(
+                        manager: manager,
+                        constraints: MealConstraints(
+                            // Fixed: Added mealType and maxCalories (defaults since they aren't inputs here)
+                            mealType: "Dinner",
+                            maxCalories: 5000,
+                            // Fixed: Passing the calculated array
+                            healthConstraints: healthConsArray
+                        ),
+                        selectedDiet: selectedDiet
+                    )) {
                         Text("Find Recipes")
                             .font(.headline)
                             .foregroundColor(.white)

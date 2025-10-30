@@ -45,6 +45,7 @@ struct ContentView: View {
                         .tabItem {
                             Label("Planner", systemImage: "fork.knife")
                         }
+
                     // Tab 2: Inventory
                     InventoryView(manager: inventoryManager)
                         .tabItem {
@@ -56,7 +57,8 @@ struct ContentView: View {
                             Label("Grocery List", systemImage: "list.bullet.clipboard.fill")
                         }
                     
-                    // Tab 2: Preferences
+                    
+                    // Tab 4: Preferences
                     PreferencesView()
                         .tabItem {
                             Label("Preferences", systemImage: "gearshape.fill")

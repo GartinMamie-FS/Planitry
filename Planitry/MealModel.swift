@@ -37,6 +37,20 @@ struct MealModel: Decodable, Identifiable {
         return Int(calories.rounded())
     }
     
+    // MARK: - SwiftUI View Helpers (New additions for compatibility)
+
+        var name: String { label }
+
+        var caloriesInt: Int { calculatedCalories }
+
+        var totalTimeMinutes: Int { Int(totalTime) }
+
+        var image: String { imageUrl }
+
+        var tags: [String] {
+            // Prioritize health labels, fall back to diet labels if necessary, and limit to 2 for display
+            return (healthLabels?.prefix(2).map { $0.capitalized } ?? dietLabels?.prefix(2).map { $0.capitalized } ?? []).filter { !$0.isEmpty }
+        }
     
     enum CodingKeys: String, CodingKey {
         case label, url, yield, calories, mealType, dietLabels, healthLabels, source, totalTime, totalNutrients // Added totalTime, totalNutrients
@@ -92,6 +106,12 @@ struct MealConstraints {
     let mealType: String
     let maxCalories: Int
     let healthConstraints: [String]
+    
+    init(mealType: String = "Dinner", maxCalories: Int = 1000, healthConstraints: [String] = []) {
+            self.mealType = mealType
+            self.maxCalories = maxCalories
+            self.healthConstraints = healthConstraints
+        }
     
     // Enum defining all user-selectable diet constraints (both Edamam 'diet' and 'health' types)
     enum DietOption: String, CaseIterable, Identifiable {
