@@ -29,8 +29,7 @@ class NetworkManager: ObservableObject {
     private let appKey = "0b487c1c405fc2c0e5d4852e1da64d08"
     private let baseURL = "https://api.edamam.com/api/recipes/v2"
 
-    // --- USER'S ORIGINAL FUNCTION (Left unchanged) ---
-    /// Fetches a random meal from the Edamam API based on user constraints.
+
     func fetchMeal(for constraints: MealConstraints, selectedDiet: String) async -> Result<MealModel, NetworkError> {
         // Set loading state
         await MainActor.run { isFetching = true }
@@ -111,9 +110,7 @@ class NetworkManager: ObservableObject {
             return .failure(.invalidResponse(nil))
         }
     }
-    
-    // --- NEW INVENTORY SEARCH FUNCTION ---
-    
+        
     /// Fetches a random meal from the Edamam API using the list of ingredients as the query.
     func fetchRecipeByInventory(ingredients: [String]) async -> Result<MealModel, NetworkError> {
         // Set loading state
@@ -132,7 +129,7 @@ class NetworkManager: ObservableObject {
         }
         
         // Edamam uses the 'q' parameter for the search query, which can be a comma-separated list.
-        let ingredientQuery = ingredients.map { $0.lowercased() }.joined(separator: ", ")
+        let ingredientQuery = ingredients.map { $0.lowercased() }.joined(separator: " ")
         
         // 2. Build Query Items (using only essential and query parameters)
         let queryItems = [

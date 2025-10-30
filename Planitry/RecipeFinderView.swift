@@ -8,7 +8,6 @@ import SwiftUI
 import Combine
 
 struct RecipeFinderView: View {
-    // FIX 1: Change to accept the manager object directly via @ObservedObject
     @ObservedObject var manager: InventoryManager
     
     @State private var foundMeal: MealModel? = nil
@@ -71,14 +70,13 @@ struct RecipeFinderView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    // FIX 3: Check manager.inventory.isEmpty
                     .background(manager.inventory.isEmpty ? Color.gray : primaryColor)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                     .padding(.horizontal)
                     .disabled(manager.inventory.isEmpty)
                     
-                    // FIX 4: Check manager.inventory.isEmpty
+            
                     if manager.inventory.isEmpty {
                         Text("Add ingredients in the Inventory tab first!")
                             .font(.caption)
@@ -94,7 +92,6 @@ struct RecipeFinderView: View {
     // MARK: - Networking Logic
     
     private func performRecipeSearch() {
-        // FIX 5: Use manager.inventory
         guard !manager.inventory.isEmpty else {
             self.errorMessage = "Your inventory is empty. Please add ingredients before searching."
             return
@@ -105,7 +102,6 @@ struct RecipeFinderView: View {
         errorMessage = nil
         foundMeal = nil
         
-        // FIX 6: Use manager.inventory
         let ingredientNames = manager.inventory.map { $0.name.lowercased() }
         let networkManager = NetworkManager()
         

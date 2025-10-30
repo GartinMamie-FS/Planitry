@@ -14,7 +14,7 @@ import SwiftUI
 struct ResultsView: View {
     
     @Environment(\.openURL) var openURL
-    @EnvironmentObject var listManager: GroceryListManager // Inject the manager
+    @EnvironmentObject var listManager: GroceryListManager 
     
     let meal: MealModel
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)

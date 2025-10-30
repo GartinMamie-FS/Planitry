@@ -35,7 +35,7 @@ enum HealthConstraint: String, CaseIterable, Identifiable {
         case .glutenFree: return "gluten-free"
         case .peanutFree: return "peanut-free"
         case .dairyFree: return "dairy-free"
-        case .sugarFree: return "sugar-conscious" // Edamam standard for sugar restrictions
+        case .sugarFree: return "sugar-conscious"
         case .treeNutFree: return "tree-nut-free"
         case .alcoholFree: return "alcohol-free"
         }
@@ -46,7 +46,7 @@ enum HealthConstraint: String, CaseIterable, Identifiable {
 // Error Enum for NetworkManager
 enum NetworkError: Error, LocalizedError {
     case invalidURL
-    case invalidResponse(Int?) // <-- NOW CAPTURES THE HTTP STATUS CODE
+    case invalidResponse(Int?) 
     case decodingError(Error)
     case noResultsFound
     

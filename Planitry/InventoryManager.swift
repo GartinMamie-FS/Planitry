@@ -14,11 +14,9 @@ import Combine
 class InventoryManager: ObservableObject {
     
     // 1. Storage for the encoded data using @AppStorage
-    // We store Data? because AppStorage cannot directly store arrays of custom types.
     @AppStorage("myInventoryData") private var inventoryData: Data?
     
     // 2. Published property for the inventory array.
-    // This is what views will bind to and observe for changes.
     @Published var inventory: [Ingredient] = []
     
     init() {

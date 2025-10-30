@@ -22,7 +22,6 @@ struct MealModel: Decodable, Identifiable {
     let healthLabels: [String]?
     let ingredients: [String]
     
-    // PROPERTIES RE-ADDED: Required by ResultsView in previous iterations
     let totalTime: Double
     
     // Computed property for easy access
@@ -46,8 +45,6 @@ struct MealModel: Decodable, Identifiable {
         case ingredientLines = "ingredientLines"
     }
     
-    // FIX 1: CUSTOM CONVENIENCE INITIALIZER (To fix the error in performRecipeSearch)
-    // This initializer is manually added back so the dummy data creation works.
     init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String], dietLabels: [String], healthLabels: [String], ingredients: [String], totalTime: Double, totalNutrients: [String: NutrientModel]) {
         self.id = id
         self.label = label
@@ -63,7 +60,7 @@ struct MealModel: Decodable, Identifiable {
         self.totalTime = totalTime
     }
     
-    // Custom initializer to handle API structure and ID/Renaming (The Decodable required init)
+   
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.label = try container.decode(String.self, forKey: .label)
@@ -77,12 +74,10 @@ struct MealModel: Decodable, Identifiable {
         self.healthLabels = try container.decodeIfPresent([String].self, forKey: .healthLabels)
 
         self.ingredients = try container.decode([String].self, forKey: .ingredientLines)
-        
-        // Decoding re-added properties
+    
         self.totalTime = try container.decode(Double.self, forKey: .totalTime)
 
 
-        // The 'id' is extracted from the 'uri'
         let uri = try container.decode(String.self, forKey: .uri)
         if let idFragment = uri.split(separator: "_").last {
             self.id = String(idFragment)

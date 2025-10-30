@@ -12,10 +12,8 @@ struct PreferencesView: View {
     // Access the shared settings object
     @EnvironmentObject var settings: UserSettings
     
-    // FIX 1: Provide default values to allow the default initializer to work.
     @State private var activeConstraints: Set<String> = []
     
-    // FIX 1: Provide default values to allow the default initializer to work.
     @State private var selectedDietOption: MealConstraints.DietOption = .balanced
     
     var body: some View {
@@ -53,7 +51,7 @@ struct PreferencesView: View {
             }
             .navigationTitle("Meal Preferences")
             
-            // FIX 2: Use .onAppear to load the state from the EnvironmentObject *after* the view is initialized.
+   
             .onAppear {
                 // 1. Load constraints from settings string into local Set
                 let currentConstraints = settings.activeHealthConstraintsString.split(separator: ",").map { String($0) }

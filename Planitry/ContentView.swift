@@ -9,7 +9,6 @@ import SwiftUI
 import Combine
 
 struct ContentView: View {
-    // Instantiates the UserSettings model once and makes it available to the environment.
     @StateObject var settings = UserSettings()
     @StateObject private var inventoryManager = InventoryManager()
         

@@ -13,7 +13,7 @@ struct GroceryListView: View {
     @EnvironmentObject var listManager: GroceryListManager
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
-    // NEW: Computed properties to split the list for better shopping experience
+    // Computed properties to split the list for better shopping experience
     var remainingItems: [GroceryListItem] {
         listManager.groceryList.filter { !$0.isChecked }
     }
@@ -21,7 +21,10 @@ struct GroceryListView: View {
     var checkedItems: [GroceryListItem] {
         listManager.groceryList.filter { $0.isChecked }
     }
-
+    
+    // State for the new item text field
+    @State private var newItemName: String = ""
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -40,29 +43,51 @@ struct GroceryListView: View {
                 }
                 .padding(.horizontal)
                 
-                // 2. Content Area
+                // 2. Add Item Section
+                HStack {
+                    TextField("Add new item...", text: $newItemName)
+                        .padding(10)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        .submitLabel(.done)
+                    
+                    Button {
+                        if !newItemName.isEmpty {
+                            listManager.addItem(ingredientName: newItemName)
+                            newItemName = ""
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title)
+                            .foregroundColor(primaryColor)
+                    }
+                    .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 10)
+                
+                // 3. Content Area
                 if listManager.groceryList.isEmpty {
                     ContentUnavailableView(
                         "Your Grocery List is Empty",
                         systemImage: "cart.fill",
-                        description: Text("Add ingredients from a generated meal to start your list.")
+                        description: Text("Add ingredients to start your persistent list.")
                     )
                     .foregroundColor(primaryColor)
                 } else {
                     List {
-                        // Section 1: Remaining Items (High Priority)
+                        // Section 1: Remaining Items
                         if !remainingItems.isEmpty {
                             Section("Remaining (\(remainingItems.count))") {
                                 ForEach(remainingItems) { item in
                                     ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
                                 }
-                                // Deletion is disabled here to encourage checking off, but can be enabled if desired
-                                //.onDelete { offsets in listManager.removeItem(at: offsets) }
+                                .onDelete(perform: deleteRemainingItems)
                             }
                             .headerProminence(.increased)
                         }
-
-                        // Section 2: Checked Items (Low Priority)
+                        
+                        // Section 2: Checked Items
                         if !checkedItems.isEmpty {
                             Section("Checked (\(checkedItems.count))") {
                                 ForEach(checkedItems) { item in
@@ -78,7 +103,7 @@ struct GroceryListView: View {
                 }
             }
             
-            // 3. Navigation Title/Bar Updates
+            // 4. Navigation Title/Bar Updates
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             
@@ -103,39 +128,15 @@ struct GroceryListView: View {
     func deleteCheckedItems(at offsets: IndexSet) {
         for index in offsets {
             let itemToDelete = checkedItems[index]
-            listManager.groceryList.removeAll { $0.id == itemToDelete.id }
+            listManager.removeItem(item: itemToDelete)
         }
     }
-}
-
-// MARK: - Individual Item Row (NEW)
-
-struct ShoppingListItemRow: View {
-    let item: GroceryListItem
-    @ObservedObject var listManager: GroceryListManager
-    let primaryColor: Color
     
-    var body: some View {
-        HStack {
-            // Checkmark or circle icon
-            Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                .resizable()
-                .frame(width: 24, height: 24)
-                .foregroundColor(item.isChecked ? .green : primaryColor.opacity(0.8))
-            
-            // Item name with styling based on checked status
-            Text(item.name)
-                .font(.body)
-                .foregroundColor(item.isChecked ? .secondary : .primary)
-                // The crucial strikethrough effect
-                .strikethrough(item.isChecked, color: .secondary)
-            
-            Spacer()
-        }
-        .contentShape(Rectangle()) // Makes the entire row tappable
-        .onTapGesture {
-            // Toggles the state when the row is tapped
-            listManager.toggleItemChecked(item: item)
+    // Helper function to correctly delete items from the original groceryList when viewing the filtered remainingItems
+    func deleteRemainingItems(at offsets: IndexSet) {
+        for index in offsets {
+            let itemToDelete = remainingItems[index]
+            listManager.removeItem(item: itemToDelete)
         }
     }
 }

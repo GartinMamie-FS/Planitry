@@ -8,7 +8,6 @@ import SwiftUI
 import Combine
 
 struct InventoryView: View {
-    // 🔑 Use @ObservedObject to watch for changes in the manager passed from the parent
     @ObservedObject var manager: InventoryManager
     
     @State private var newIngredientName: String = ""
