@@ -14,7 +14,7 @@ import SwiftUI
 struct ResultsView: View {
     
     @Environment(\.openURL) var openURL
-    @EnvironmentObject var listManager: GroceryListManager 
+    @EnvironmentObject var listManager: GroceryListManager
     
     let meal: MealModel
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
@@ -22,15 +22,39 @@ struct ResultsView: View {
     // State for visual feedback when an item is added
     @State private var addedItemName: String? = nil
     @State private var showSuccessMessage = false
+    @State private var isBulkAdd: Bool = false // Tracks if the last action was bulk add
 
-    // MARK: - Helper Function
+    // MARK: - Helper Functions
+    
+    // Function to add a single ingredient
     private func addIngredientToList(ingredient: String) {
         listManager.addItem(ingredientName: ingredient)
         
-        // Show brief success feedback
+        // Show brief success feedback for single item
         addedItemName = ingredient
+        isBulkAdd = false
         showSuccessMessage = true
         
+        // Hide the message after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showSuccessMessage = false
+            }
+        }
+    }
+
+    // NEW: Function to add all ingredients
+    private func addAllIngredientsToList() {
+        // Iterate through all ingredients and add them to the list manager
+        for ingredient in meal.ingredients {
+            listManager.addItem(ingredientName: ingredient)
+        }
+
+        // Show generic success feedback for bulk add
+        addedItemName = nil // Clear individual item name feedback
+        isBulkAdd = true
+        showSuccessMessage = true
+
         // Hide the message after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation {
@@ -95,6 +119,21 @@ struct ResultsView: View {
                         Text("Ingredients (\(meal.ingredientCount))")
                             .font(.headline)
                         
+                        // NEW: Add All Ingredients Button
+                        Button(action: addAllIngredientsToList) {
+                            HStack {
+                                Image(systemName: "cart.fill.badge.plus")
+                                Text("Add All Ingredients to List")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(primaryColor)
+                            .cornerRadius(10)
+                        }
+                        .padding(.vertical, 5)
+                        
                         // Display the list of ingredients with 'Add to List' functionality
                         ForEach(meal.ingredients, id: \.self) { ingredient in
                             HStack(alignment: .top) {
@@ -108,7 +147,7 @@ struct ResultsView: View {
                                 
                                 Spacer()
                                 
-                                // NEW: Button to add the ingredient to the grocery list
+                                // Button to add the ingredient to the grocery list
                                 Button(action: {
                                     addIngredientToList(ingredient: ingredient)
                                 }) {
@@ -161,7 +200,7 @@ struct ResultsView: View {
         .overlay(
             VStack {
                 if showSuccessMessage {
-                    Text("Added to Grocery List!")
+                    Text(isBulkAdd ? "All Ingredients Added to List!" : "Added \(addedItemName ?? "Item") to Grocery List!")
                         .font(.caption)
                         .fontWeight(.bold)
                         .padding(.vertical, 8)
