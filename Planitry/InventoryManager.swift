@@ -79,4 +79,28 @@ class InventoryManager: ObservableObject {
         // Save the updated array to AppStorage
         saveInventory()
     }
+    // MARK: - Item Transfer Logic
+    
+    /// Converts a purchased GroceryListItem into an Ingredient and adds it to the inventory.
+    /// Purchased items use placeholder quantity/unit since GroceryListItem lacks that detail.
+    func receivePurchasedItem(item: GroceryListItem) {
+        let normalizedName = item.name.lowercased().trimmingCharacters(in: .whitespaces)
+        
+        // Prevent adding duplicates if the item (by name) is already in the inventory
+        if inventory.contains(where: { $0.normalizedName == normalizedName }) {
+            print("Item \(item.name) already in inventory. Skipping addition.")
+            return
+        }
+        
+        // Use a placeholder quantity and unit (1.0 "unit")
+        let newIngredient = Ingredient(
+            name: item.name,
+            quantity: 1.0,
+            unit: "unit"
+        )
+        
+        inventory.append(newIngredient)
+        saveInventory()
+        print("Purchased item \(item.name) successfully moved to Inventory.")
+    }
 }

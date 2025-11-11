@@ -38,11 +38,17 @@ class GroceryListManager: ObservableObject {
     // Combine set to hold our subscription that monitors the list for changes
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
-        // 1. Load the list from UserDefaults when the manager is created
+    // This closure will be set by ContentView to communicate with the InventoryManager
+    private var inventoryTransferHandler: ((GroceryListItem) -> Void)?
+        
+    // Updated initializer to accept the transfer handler closure
+    init(inventoryTransferHandler: ((GroceryListItem) -> Void)? = nil) {
+        self.inventoryTransferHandler = inventoryTransferHandler
+
+        // 1. Load the list from UserDefaults
         load()
         
-        // 2. Subscribe to changes in the published list and save them automatically
+        // 2. Subscribe to changes and save them automatically
         $groceryList
             .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -50,6 +56,7 @@ class GroceryListManager: ObservableObject {
             }
             .store(in: &cancellables)
     }
+
     
     // MARK: - Persistence Handlers
     
@@ -102,8 +109,13 @@ class GroceryListManager: ObservableObject {
     func toggleItemChecked(item: GroceryListItem) {
         // Find the index of the item and toggle its boolean property
         if let index = groceryList.firstIndex(where: { $0.id == item.id }) {
-            // The sink will detect this change and call save()
+            // Toggle the checked state
             groceryList[index].isChecked.toggle()
+            
+            // CRITICAL CHANGE: If the item is NOW checked (true), transfer it to inventory
+            if groceryList[index].isChecked {
+                inventoryTransferHandler?(groceryList[index])
+            }
         }
     }
     
@@ -145,7 +157,7 @@ struct ShoppingListItemRow: View {
             
             Spacer()
         }
-        .contentShape(Rectangle()) 
+        .contentShape(Rectangle())
         .onTapGesture {
             // Toggles the state when the row is tapped
             listManager.toggleItemChecked(item: item)

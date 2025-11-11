@@ -8,7 +8,7 @@ import SwiftUI
 import Combine
 
 struct InventoryView: View {
-    @ObservedObject var manager: InventoryManager
+    @EnvironmentObject var manager: InventoryManager
     @EnvironmentObject var settings: UserSettings
     
     @State private var newIngredientName: String = ""

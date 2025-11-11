@@ -11,6 +11,7 @@ import Combine
 struct ContentView: View {
     @StateObject var settings = UserSettings()
     @StateObject private var inventoryManager = InventoryManager()
+    
         
     
     // State to control whether the splash screen is visible
@@ -22,6 +23,22 @@ struct ContentView: View {
             Ingredient(name: "sugar", quantity: 2, unit: "tbsp")
         ]
     @StateObject var listManager = GroceryListManager()
+    
+    // Custom Initializer to set up the managers and link them
+        init() {
+            // 1. Initialize InventoryManager
+            let inventory = InventoryManager()
+            self._inventoryManager = StateObject(wrappedValue: inventory)
+
+            // 2. Initialize GroceryListManager, passing the InventoryManager's purchase handler
+            // This creates the link for automatic transfer
+            let groceryList = GroceryListManager(inventoryTransferHandler: inventory.receivePurchasedItem)
+            self._listManager = StateObject(wrappedValue: groceryList)
+
+            // 3. Initialize other StateObjects
+            self._settings = StateObject(wrappedValue: UserSettings())
+            self._isLoading = State(initialValue: true)
+        }
     
     var body: some View {
         
@@ -47,10 +64,12 @@ struct ContentView: View {
                         }
 
                     // Tab 2: Inventory
-                    InventoryView(manager: inventoryManager)
+                    InventoryView()
                         .tabItem {
                             Label("Inventory", systemImage: "archivebox.fill")
                         }
+                        .environmentObject(inventoryManager)
+                    
                     // Tab 3: Grocery List
                     GroceryListView()
                         .tabItem {
