@@ -59,20 +59,20 @@ struct MealModel: Decodable, Identifiable {
         case ingredientLines = "ingredientLines"
     }
     
-    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String], dietLabels: [String], healthLabels: [String], ingredients: [String], totalTime: Double, totalNutrients: [String: NutrientModel]) {
-        self.id = id
-        self.label = label
-        self.imageUrl = imageUrl
-        self.url = url
-        self.source = source
-        self.yield = yield
-        self.calories = calories
-        self.mealType = mealType
-        self.dietLabels = dietLabels
-        self.healthLabels = healthLabels
-        self.ingredients = ingredients
-        self.totalTime = totalTime
-    }
+    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String]?, dietLabels: [String]?, healthLabels: [String]?, ingredients: [String], totalTime: Double, totalNutrients: [String: NutrientModel]) {
+            self.id = id
+            self.label = label
+            self.imageUrl = imageUrl
+            self.url = url
+            self.source = source
+            self.yield = yield
+            self.calories = calories
+            self.mealType = mealType
+            self.dietLabels = dietLabels
+            self.healthLabels = healthLabels
+            self.ingredients = ingredients
+            self.totalTime = totalTime
+        }
     
    
     init(from decoder: Decoder) throws {

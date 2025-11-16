@@ -44,7 +44,7 @@ enum HealthConstraint: String, CaseIterable, Identifiable {
 
 
 // Error Enum for NetworkManager
-enum NetworkError: Error, LocalizedError {
+enum NetworkErrorEdamam: Error, LocalizedError {
     case invalidURL
     case invalidResponse(Int?) 
     case decodingError(Error)
