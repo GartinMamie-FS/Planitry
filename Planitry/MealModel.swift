@@ -9,94 +9,139 @@ import Foundation
 
 // MARK: - 1. MODEL DEFINITIONS
 
-struct MealModel: Decodable, Identifiable {
+struct MealModel: Codable, Identifiable {
+    
+    // MARK: - Required for Identifiable & Persistence
     let id: String
     let label: String
+    
+    // MARK: - Recipe Details
     let imageUrl: String
     let url: String
     let source: String
+    
+    // MARK: - Nutritional & Yield
     let yield: Double
     let calories: Double
+    let totalTime: Double
+    
+    // MARK: - Labels & Ingredients
     let mealType: [String]?
     let dietLabels: [String]?
     let healthLabels: [String]?
     let ingredients: [String]
     
-    let totalTime: Double
-    
-    // Computed property for easy access
+    // Computed properties
     var ingredientCount: Int {
         return ingredients.count
     }
     
     var calculatedCalories: Int {
-        // If yield is 0, return the total calories, otherwise calculate per serving
         if yield > 0 {
             return Int((calories / yield).rounded())
         }
         return Int(calories.rounded())
     }
     
-    // MARK: - SwiftUI View Helpers (New additions for compatibility)
-
-        var name: String { label }
-
-        var caloriesInt: Int { calculatedCalories }
-
-        var totalTimeMinutes: Int { Int(totalTime) }
-
-        var image: String { imageUrl }
-
-        var tags: [String] {
-            // Prioritize health labels, fall back to diet labels if necessary, and limit to 2 for display
-            return (healthLabels?.prefix(2).map { $0.capitalized } ?? dietLabels?.prefix(2).map { $0.capitalized } ?? []).filter { !$0.isEmpty }
-        }
-    
-    enum CodingKeys: String, CodingKey {
-        case label, url, yield, calories, mealType, dietLabels, healthLabels, source, totalTime, totalNutrients // Added totalTime, totalNutrients
-        case uri
-        case image = "image"
-        case ingredientLines = "ingredientLines"
+    // MARK: - SwiftUI View Helpers
+    var name: String { label }
+    var caloriesInt: Int { calculatedCalories }
+    var totalTimeMinutes: Int { Int(totalTime) }
+    var image: String { imageUrl }
+    var tags: [String] {
+        return (healthLabels?.prefix(2).map { $0.capitalized } ?? dietLabels?.prefix(2).map { $0.capitalized } ?? []).filter { !$0.isEmpty }
     }
     
-    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String]?, dietLabels: [String]?, healthLabels: [String]?, ingredients: [String], totalTime: Double, totalNutrients: [String: NutrientModel]) {
-            self.id = id
-            self.label = label
-            self.imageUrl = imageUrl
-            self.url = url
-            self.source = source
-            self.yield = yield
-            self.calories = calories
-            self.mealType = mealType
-            self.dietLabels = dietLabels
-            self.healthLabels = healthLabels
-            self.ingredients = ingredients
-            self.totalTime = totalTime
-        }
+    // MARK: - Coding Keys
+    enum CodingKeys: String, CodingKey {
+        // Local Persistence Keys (Used for saving to and loading from UserDefaults)
+        case id, label, imageUrl, url, source, yield, calories, totalTime, mealType, dietLabels, healthLabels, ingredients
+        
+        // API-Specific Keys (ONLY used for decoding from the external network API)
+        case uri
+        case image
+        case ingredientLines
+    }
     
-   
+    // MARK: - Convenience Initializer (Used by NetworkManager for Mapping)
+    // This allows NetworkManager to build a MealModel from its internal API data structs.
+    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String]?, dietLabels: [String]?, healthLabels: [String]?, ingredients: [String], totalTime: Double) {
+        self.id = id
+        self.label = label
+        self.imageUrl = imageUrl
+        self.url = url
+        self.source = source
+        self.yield = yield
+        self.calories = calories
+        self.mealType = mealType
+        self.dietLabels = dietLabels
+        self.healthLabels = healthLabels
+        self.ingredients = ingredients
+        self.totalTime = totalTime
+    }
+    
+    // MARK: - ENCODABLE CONFORMANCE (For Local Saving)
+    // Manually implements saving using the Local Persistence Keys.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(id, forKey: .id)
+        try container.encode(label, forKey: .label)
+        try container.encode(imageUrl, forKey: .imageUrl)
+        try container.encode(url, forKey: .url)
+        try container.encode(source, forKey: .source)
+        try container.encode(yield, forKey: .yield)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(totalTime, forKey: .totalTime)
+        try container.encodeIfPresent(mealType, forKey: .mealType)
+        try container.encodeIfPresent(dietLabels, forKey: .dietLabels)
+        try container.encodeIfPresent(healthLabels, forKey: .healthLabels)
+        try container.encode(ingredients, forKey: .ingredients)
+    }
+    
+    // MARK: - DECÓDABLE CONFORMANCE (For Local Loading AND API Loading)
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.label = try container.decode(String.self, forKey: .label)
-        self.imageUrl = try container.decode(String.self, forKey: .image)
-        self.url = try container.decode(String.self, forKey: .url)
-        self.source = try container.decode(String.self, forKey: .source)
-        self.yield = try container.decode(Double.self, forKey: .yield)
-        self.calories = try container.decode(Double.self, forKey: .calories)
-        self.mealType = try container.decodeIfPresent([String].self, forKey: .mealType)
-        self.dietLabels = try container.decodeIfPresent([String].self, forKey: .dietLabels)
-        self.healthLabels = try container.decodeIfPresent([String].self, forKey: .healthLabels)
-
-        self.ingredients = try container.decode([String].self, forKey: .ingredientLines)
+        
+        if container.contains(.image) {
+            // Case 1: Decoding from the API (Spoonacular)
+            
+            self.label = try container.decode(String.self, forKey: .label)
+            self.imageUrl = try container.decode(String.self, forKey: .image) // API key is "image"
+            self.url = try container.decode(String.self, forKey: .url)
+            self.source = try container.decode(String.self, forKey: .source)
+            self.yield = try container.decode(Double.self, forKey: .yield)
+            self.calories = try container.decode(Double.self, forKey: .calories)
+            self.mealType = try container.decodeIfPresent([String].self, forKey: .mealType)
+            self.dietLabels = try container.decodeIfPresent([String].self, forKey: .dietLabels)
+            self.healthLabels = try container.decodeIfPresent([String].self, forKey: .healthLabels)
+            self.ingredients = try container.decode([String].self, forKey: .ingredientLines) // API key is "ingredientLines"
+            self.totalTime = try container.decode(Double.self, forKey: .totalTime)
+            
     
-        self.totalTime = try container.decode(Double.self, forKey: .totalTime)
-
-
-        let uri = try container.decode(String.self, forKey: .uri)
-        if let idFragment = uri.split(separator: "_").last {
-            self.id = String(idFragment)
+            if let decodedId = try? container.decode(String.self, forKey: .id) {
+                 self.id = decodedId
+            } else if let uri = try? container.decode(String.self, forKey: .uri), let idFragment = uri.split(separator: "_").last {
+                self.id = String(idFragment)
+            } else {
+                self.id = UUID().uuidString
+            }
+            
         } else {
-            self.id = UUID().uuidString
+            // Case 2: Decoding from Local Storage (UserDefaults)
+            
+            self.id = try container.decode(String.self, forKey: .id)
+            self.label = try container.decode(String.self, forKey: .label)
+            self.imageUrl = try container.decode(String.self, forKey: .imageUrl)
+            self.url = try container.decode(String.self, forKey: .url)
+            self.source = try container.decode(String.self, forKey: .source)
+            self.yield = try container.decode(Double.self, forKey: .yield)
+            self.calories = try container.decode(Double.self, forKey: .calories)
+            self.mealType = try container.decodeIfPresent([String].self, forKey: .mealType)
+            self.dietLabels = try container.decodeIfPresent([String].self, forKey: .dietLabels)
+            self.healthLabels = try container.decodeIfPresent([String].self, forKey: .healthLabels)
+            self.ingredients = try container.decode([String].self, forKey: .ingredients)
+            self.totalTime = try container.decode(Double.self, forKey: .totalTime)
         }
     }
 }

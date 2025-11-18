@@ -10,6 +10,13 @@ import Combine
 struct InventoryView: View {
     @EnvironmentObject var manager: InventoryManager
     @EnvironmentObject var settings: UserSettings
+    @EnvironmentObject var recipeManager: RecipeManager
+    
+    // 2. Add Network Manager and State for Search
+    @StateObject private var networkManager = NetworkManager()
+    @State private var foundMeal: MealModel? = nil
+    @State private var alertError: Error? = nil
+    @State private var showResults = false // Controls navigation
     
     @State private var newIngredientName: String = ""
     @State private var newIngredientQuantity: String = ""
@@ -44,10 +51,72 @@ struct InventoryView: View {
         manager.deleteIngredients(offsets: offsets)
     }
     
+    // MARK: - Save Logic (for ResultsView)
+    
+    private func saveRecipeAction(mealToSave: MealModel) {
+            // 1. Use the RecipeManager to save the whole object
+            recipeManager.addRecipe(mealToSave)
+            
+            // 2. Add confirmation print (optional)
+            print("Recipe Saved: \(mealToSave.label) (\(mealToSave.id))")
+        }
+
+    // MARK: - Networking Logic (Moved from RecipeFinderView)
+    
+    private func performRecipeSearch() {
+        guard !manager.inventory.isEmpty else {
+            self.alertError = NSError(domain: "InventoryError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Your inventory is empty. Please add ingredients before searching."])
+            return
+        }
+        
+        alertError = nil
+        foundMeal = nil
+        showResults = false
+        
+        let ingredientNames = manager.inventory.map { $0.name.lowercased() }
+        
+        Task {
+            let result = await networkManager.fetchRecipeByInventory(
+                ingredients: ingredientNames,
+                maxCalories: Int(settings.maxCalories),
+                selectedDiet: settings.selectedDiet,
+                healthConstraints: settings.activeHealthConstraints
+            )
+            
+            await MainActor.run {
+                switch result {
+                case .success(let meal):
+                    self.foundMeal = meal
+                    self.showResults = true // Trigger navigation on success
+                case .failure(let error):
+                    self.alertError = error
+                }
+            }
+        }
+    }
+    
     // MARK: - View Body
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
+                
+                // --- Hidden NavigationLink for Result Transition ---
+                // The destination now passes the foundMeal and the save action.
+                NavigationLink(
+                    destination: Group {
+                        if let meal = foundMeal {
+                            ResultsView(
+                                meal: meal,
+                                onSave: saveRecipeAction // Pass the save action
+                            )
+                        } else {
+                            Text("No meal data available.")
+                        }
+                    },
+                    isActive: $showResults,
+                    label: { EmptyView() }
+                )
+                .hidden()
                 
                 // MARK: - Header
                 VStack(spacing: 8) {
@@ -135,42 +204,47 @@ struct InventoryView: View {
                 }
                 .padding(.horizontal)
                 
-                // MARK: - Action Button
+                Spacer()
+                
+                // MARK: - Action Button (Triggers Search)
                 if !manager.inventory.isEmpty {
                     
-                    // 1. Combine selected diet (if any) and custom constraints string into the required [String] array.
-                    let healthConsArray = ([selectedDiet] + recipeConstraints.split(separator: ",")
-                        .map { String($0.trimmingCharacters(in: .whitespaces)) })
-                        .filter { !$0.isEmpty }
-                    
-                    // 2. Instantiate MealConstraints with the required parameters
-                    NavigationLink(destination: RecipeFinderView(
-                        manager: manager,
-                        constraints: MealConstraints(
-                            // Fixed: Added mealType and maxCalories (defaults since they aren't inputs here)
-                            mealType: "Dinner",
-                            maxCalories: 5000,
-                            // Fixed: Passing the calculated array
-                            healthConstraints: healthConsArray
-                        ),
-                        selectedDiet: selectedDiet
-                    )) {
-                        Text("Find Recipes")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange.opacity(0.9))
-                            .cornerRadius(12)
-                            .shadow(radius: 5)
+                    Button(action: performRecipeSearch) {
+                        if networkManager.isFetching {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.orange.opacity(0.7))
+                                .cornerRadius(12)
+                        } else {
+                            Text("Find Recipes")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.orange.opacity(0.9))
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                        }
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 10)
+                    .disabled(networkManager.isFetching)
                 }
                 
             }
             .navigationTitle("")
             .navigationBarHidden(true)
+        }
+        // MARK: - Error Alert
+        .alert("Search Error", isPresented: Binding(
+            get: { alertError != nil },
+            set: { _ in alertError = nil }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertError?.localizedDescription ?? "An unknown error occurred while searching for a recipe.")
         }
     }
 }

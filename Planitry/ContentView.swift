@@ -11,35 +11,15 @@ import Combine
 struct ContentView: View {
     @StateObject var settings = UserSettings()
     @StateObject private var inventoryManager = InventoryManager()
+    @StateObject private var listManager = GroceryListManager()
     
-        
+    // 1. New StateObject for Saved Recipes
+    @StateObject private var recipeManager = RecipeManager()
     
     // State to control whether the splash screen is visible
     @State private var isLoading = true
     
-    @State private var inventory: [Ingredient] = [
-            Ingredient(name: "milk", quantity: 1, unit: "cup"),
-            Ingredient(name: "butter", quantity: 0.5, unit: "stick"),
-            Ingredient(name: "sugar", quantity: 2, unit: "tbsp")
-        ]
-    @StateObject var listManager = GroceryListManager()
-    
-    // Custom Initializer to set up the managers and link them
-        init() {
-            // 1. Initialize InventoryManager
-            let inventory = InventoryManager()
-            self._inventoryManager = StateObject(wrappedValue: inventory)
 
-            // 2. Initialize GroceryListManager, passing the InventoryManager's purchase handler
-            // This creates the link for automatic transfer
-            let groceryList = GroceryListManager(inventoryTransferHandler: inventory.receivePurchasedItem)
-            self._listManager = StateObject(wrappedValue: groceryList)
-
-            // 3. Initialize other StateObjects
-            self._settings = StateObject(wrappedValue: UserSettings())
-            self._isLoading = State(initialValue: true)
-        }
-    
     var body: some View {
         
         ZStack {
@@ -76,8 +56,14 @@ struct ContentView: View {
                             Label("Grocery List", systemImage: "list.bullet.clipboard.fill")
                         }
                     
+                    // 🔥 NEW TAB: My Recipes
+                    RecipeView()
+                        .tabItem {
+                            Label("My Recipes", systemImage: "book.closed.fill")
+                        }
+                        .environmentObject(recipeManager)
                     
-                    // Tab 4: Preferences
+                    // Tab 5: Preferences (was Tab 4)
                     PreferencesView()
                         .tabItem {
                             Label("Preferences", systemImage: "gearshape.fill")
@@ -88,11 +74,13 @@ struct ContentView: View {
                 
                 .fullScreenCover(isPresented: .constant(!settings.hasCompletedOnboarding)) {
                     OnboardingFlowView()
-                        // Ensure the UserSettings object is available inside the modal
                         .environmentObject(settings)
                 }
             }
         }
         .environmentObject(settings)
+        .environmentObject(recipeManager)
+        .environmentObject(inventoryManager)
+        .environmentObject(listManager)
     }
 }

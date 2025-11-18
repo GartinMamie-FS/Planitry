@@ -7,65 +7,80 @@
 
 import SwiftUI
 
+
 // MARK: - Planner View (A4)
 
 struct PlannerView: View {
     // 1. Local State for Meal Selection
     @State private var selectedMealType: MealType = .breakfast
-    
+
     // 2. Access to Global Preferences
     @EnvironmentObject var settings: UserSettings
     
-    // 3. Network Manager and Navigation State
+    @EnvironmentObject var recipeManager: RecipeManager
+
+    // 3. Network Manager
     @StateObject private var networkManager = NetworkManager()
-    @State private var mealResult: MealModel? = nil
-    
+
+    // SINGLE MEAL STATE
+    @State private var foundMeal: MealModel? = nil
+
     // State to trigger an alert on network error
     @State private var alertError: NetworkError? = nil
-    
+
     // State to trigger navigation on success
     @State private var showResults = false
-    
+
+    // Primary color for styling
+    let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
+
     // Helper to format the health constraints string for display
     var constraintsDisplay: String {
         let constraints = settings.activeHealthConstraints
             .map { $0.replacingOccurrences(of: "-", with: " ").capitalized }
-        
         return constraints.isEmpty ? "None" : constraints.joined(separator: ", ")
     }
-    
-    // Primary color for styling
-    let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
 
-    // MARK: - Network Action Function (A7)
+    // MARK: - Action Functions
+
+    func saveMeal(mealToSave: MealModel) {
+        recipeManager.addRecipe(mealToSave)
+    }
+
+    // MARK: - Network Action Function
     func generateMeal() {
-        // Reset previous results/errors and hide the result view
-        mealResult = nil
         alertError = nil
-        showResults = false
-        
+        self.showResults = true // 👈 ADD THIS LINE
+
         // 1. Construct constraints object from user settings
         let constraints = MealConstraints(
             mealType: selectedMealType.rawValue,
             maxCalories: settings.maxCalories,
             healthConstraints: settings.activeHealthConstraints
         )
-        
-        // 2. Execute network call in a Task
+
+        // 2. Execute network call
         Task {
+            // Reset state before fetching
+            await MainActor.run {
+                self.foundMeal = nil
+            }
+
             let result = await networkManager.fetchMeal(
                 for: constraints,
                 selectedDiet: settings.selectedDiet
             )
-            
+
             // 3. Update UI state based on result
             await MainActor.run {
                 switch result {
                 case .success(let meal):
-                    self.mealResult = meal
-                    self.showResults = true
+                    // Store the new meal, NavigationLink stays active
+                    self.foundMeal = meal
                 case .failure(let error):
                     self.alertError = error
+                    // If an error occurs, dismiss the results view
+                    self.showResults = false
                 }
             }
         }
@@ -78,14 +93,31 @@ struct PlannerView: View {
                 
                 // --- Hidden NavigationLink for Result Transition ---
                 NavigationLink(
-                    destination: {
-                        guard let meal = mealResult else {
-                            return AnyView(Text("Error: Meal data not available.").foregroundColor(.red))
-                        }
-                        return AnyView(ResultsView(meal: meal))
-                    }(),
-                    isActive: $showResults,
-                    label: { EmptyView() }
+                                    destination: Group {
+                                        if let meal = foundMeal {
+                                            ResultsView(
+                                                meal: meal,
+                                                onSave: saveMeal // Pass the action closure
+                                            )
+                                        } else {
+                                            VStack(spacing: 15) {
+                                                ProgressView()
+                                                    .scaleEffect(1.5, anchor: .center)
+                                                    .progressViewStyle(CircularProgressViewStyle(tint: primaryColor))
+                                                
+                                                Text("Searching for the perfect meal...")
+                                                    .font(.title3)
+                                                    .foregroundColor(.secondary)
+                                                
+                                                Text("Based on your \(settings.selectedDiet.capitalized) diet and \(settings.maxCalories / 3) kcal limit.")
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        }
+                                    },
+                                    isActive: $showResults,
+                                    label: { EmptyView() }
                 )
                 .hidden()
                 
@@ -209,7 +241,7 @@ struct PlannerView: View {
     }
 }
 
-// Meal Time Button 
+// Meal Time Button
 struct MealTimeButton: View {
     let meal: MealType
     @Binding var selectedMealType: MealType

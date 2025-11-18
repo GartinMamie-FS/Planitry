@@ -126,7 +126,7 @@ class NetworkManager: ObservableObject {
         
         // We use the actual calorie count from the API instead of estimating
         
-        return MealModel(
+        return MealModel (
             id: String(searchHit.id),
             label: details.title,
             imageUrl: details.image ?? searchHit.image ?? "",
@@ -142,7 +142,7 @@ class NetworkManager: ObservableObject {
             ingredients: ingredients,
             totalTime: totalTime,
             
-            totalNutrients: [:]
+
         )
     }
     
@@ -199,59 +199,8 @@ class NetworkManager: ObservableObject {
         return .success(meal)
     }
     
-    // MARK: - 2. Fetch Meals for Planner (Multiple Meals)
     
-    func fetchMealsForPlanner(count: Int, constraints: MealConstraints, selectedDiet: String) async -> Result<[MealModel], NetworkError> {
-        await MainActor.run { isFetching = true }
-        let healthConstraints = constraints.healthConstraints.map { $0.lowercased() }
-        defer { Task { @MainActor in isFetching = false } }
-        
-        // 1. Construct Search URL (Step 1) - complexSearch
-        guard var searchComponents = URLComponents(string: baseURL + "complexSearch") else {
-            return .failure(.invalidURL)
-        }
-        
-        let spoonacularDiet = selectedDiet.lowercased() == "balanced" ? nil : selectedDiet.lowercased()
-        let tagsQuery = healthConstraints.isEmpty ? "recipe" : healthConstraints.joined(separator: ", ")
-        
-        searchComponents.queryItems = [
-            URLQueryItem(name: "query", value: tagsQuery),
-            URLQueryItem(name: "type", value: constraints.mealType.lowercased()),
-            URLQueryItem(name: "diet", value: spoonacularDiet),
-            URLQueryItem(name: "maxCalories", value: String(constraints.maxCalories)), // Fixed multiplier
-            URLQueryItem(name: "number", value: String(count)),
-            URLQueryItem(name: "sort", value: "random")
-        ].compactMap { $0.value != nil ? $0 : nil }
-        
-        guard let searchURL = searchComponents.url else { return .failure(.invalidURL) }
-        print("\n*** Spoonacular Planner Search URL (Count: \(count)) ***\n\(searchURL.absoluteString)")
-        
-        // 2. Perform Search (Get IDs)
-        let searchResult: Result<SpoonacularSearchResponse, NetworkError> = await executeFetch(for: searchURL, type: SpoonacularSearchResponse.self)
-        
-        guard case .success(let searchResponse) = searchResult, !searchResponse.results.isEmpty else {
-            return .failure(.noResultsFound)
-        }
-        
-        // 3. Batch Fetch Details (Step 2)
-        var meals: [MealModel] = []
-        
-        for hit in searchResponse.results {
-            // *** FIX: Set includeNutrition=true to get actual calorie count ***
-            guard let detailsURL = URL(string: baseURL + "\(hit.id)/information?includeNutrition=true") else { continue }
-            
-            let detailsResult: Result<SpoonacularRecipeDetails, NetworkError> = await executeFetch(for: detailsURL, type: SpoonacularRecipeDetails.self)
-            
-            if case .success(let details) = detailsResult {
-                let meal = mapDetailsToMealModel(searchHit: hit, details: details, constraints: constraints, selectedDiet: selectedDiet, healthConstraints: healthConstraints)
-                meals.append(meal)
-            }
-        }
-        
-        return meals.isEmpty ? .failure(.noResultsFound) : .success(meals)
-    }
-    
-    // MARK: - 3. Fetch Recipe by Inventory
+    // MARK: - 2. Fetch Recipe by Inventory
     
     func fetchRecipeByInventory(ingredients: [String], maxCalories: Int, selectedDiet: String, healthConstraints: [String]) async -> Result<MealModel, NetworkError> {
         await MainActor.run { isFetching = true }
