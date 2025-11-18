@@ -9,6 +9,7 @@ import SwiftUI
 import Foundation
 import Combine
 
+
 // MARK: - InventoryManager (Observable Object for AppStorage Persistence)
 
 class InventoryManager: ObservableObject {
@@ -59,6 +60,7 @@ class InventoryManager: ObservableObject {
     
     /// Adds a new ingredient and saves the changes.
     func addIngredient(name: String, quantity: Double, unit: String) {
+        // Assuming Ingredient is defined elsewhere with Codable and Identifiable conformance
         let newIngredient = Ingredient(
             name: name.trimmingCharacters(in: .whitespaces),
             quantity: quantity,
@@ -71,14 +73,33 @@ class InventoryManager: ObservableObject {
         saveInventory()
     }
     
-    /// Deletes ingredients at the specified index set and saves the changes.
-    func deleteIngredients(offsets: IndexSet) {
-        // Remove the items from the array
-        inventory.remove(atOffsets: offsets)
+    /// 🔑 NEW FUNCTION: Updates an existing ingredient by its ID and saves the changes.
+    func updateIngredient(id: UUID, newName: String, newQuantity: Double, newUnit: String) {
+        if let index = inventory.firstIndex(where: { $0.id == id }) {
+            // Update the properties
+            inventory[index].name = newName.trimmingCharacters(in: .whitespaces)
+            inventory[index].quantity = newQuantity
+            inventory[index].unit = newUnit.trimmingCharacters(in: .whitespaces)
+            
+            // Save the updated array to AppStorage
+            saveInventory()
+        } else {
+            print("Error: Ingredient with ID \(id) not found for update.")
+        }
+    }
+    
+    /// 🔑 NEW FUNCTION: Removes ingredients based on a list of IDs and saves the changes.
+    func removeIngredients(with ids: [UUID]) {
+        // Filter out any ingredients whose IDs are in the provided list
+        inventory.removeAll { ids.contains($0.id) }
         
         // Save the updated array to AppStorage
         saveInventory()
     }
+    
+    // The original `deleteIngredients(offsets: IndexSet)` is no longer necessary
+    // if the view calls `removeIngredients(with:)`.
+    
     // MARK: - Item Transfer Logic
     
     /// Converts a purchased GroceryListItem into an Ingredient and adds it to the inventory.
@@ -93,6 +114,7 @@ class InventoryManager: ObservableObject {
         }
         
         // Use a placeholder quantity and unit (1.0 "unit")
+        // Assuming Ingredient is defined elsewhere
         let newIngredient = Ingredient(
             name: item.name,
             quantity: 1.0,

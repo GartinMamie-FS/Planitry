@@ -71,7 +71,7 @@ enum NetworkErrorEdamam: Error, LocalizedError {
 
 struct Ingredient: Identifiable, Codable, Equatable {
     let id = UUID()
-    let name: String
+    var name: String
     var quantity: Double
     var unit: String
     let dateAdded = Date()

@@ -30,13 +30,19 @@ struct ResultsView: View {
 
     // MARK: - Helper Functions
     
-    private func addIngredientToList(ingredient: String) {
-        listManager.addItem(ingredientName: ingredient)
+    private func addIngredientToList(ingredient: String, cleanName: String) {
+        // Add the clean, parsed ingredient name to the list
+        listManager.addItem(ingredientName: cleanName)
         
-        addedItemName = ingredient
+        addedItemName = cleanName // Use the clean name for the success message
         isBulkAdd = false
-        showSuccessMessage = true
         
+        // 🔑 FIX: Explicitly show the success message immediately with animation
+        withAnimation {
+            showSuccessMessage = true
+        }
+        
+        // Hide the message after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation {
                 showSuccessMessage = false
@@ -45,14 +51,20 @@ struct ResultsView: View {
     }
 
     private func addAllIngredientsToList() {
-        for ingredient in meal.ingredients {
-            listManager.addItem(ingredientName: ingredient)
+        // Use the new array of clean names for the grocery list
+        for ingredientName in meal.ingredientNames {
+            listManager.addItem(ingredientName: ingredientName)
         }
 
         addedItemName = nil
         isBulkAdd = true
-        showSuccessMessage = true
+        
+        // 🔑 FIX: Explicitly show the success message immediately with animation
+        withAnimation {
+            showSuccessMessage = true
+        }
 
+        // Hide the message after a short delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation {
                 showSuccessMessage = false
@@ -136,23 +148,28 @@ struct ResultsView: View {
                                     .cornerRadius(10)
                                 }
                                 .padding(.vertical, 5)
-                                
+                                    
                                 // Ingredient list
-                                ForEach(meal.ingredients, id: \.self) { ingredient in
+                                ForEach(Array(zip(meal.ingredients, meal.ingredientNames)), id: \.0) { originalIngredient, cleanIngredientName in
                                     HStack(alignment: .top) {
                                         Image(systemName: "circle.fill")
                                             .font(.system(size: 8))
                                             .foregroundColor(primaryColor)
                                             .padding(.top, 5)
-                                            
-                                        Text(ingredient)
+                                                
+                                        // Display the full original ingredient text (e.g., "1/2 cup milk")
+                                        Text(originalIngredient)
                                             .font(.body)
-                                            
+                                                
                                         Spacer()
-                                            
+                                                
                                         // Button to add the ingredient to the grocery list
                                         Button(action: {
-                                            addIngredientToList(ingredient: ingredient)
+                                            // Pass the clean name to the updated helper function
+                                            addIngredientToList(
+                                                ingredient: originalIngredient,
+                                                cleanName: cleanIngredientName
+                                            )
                                         }) {
                                             HStack(spacing: 4) {
                                                 Image(systemName: "cart.badge.plus")
@@ -167,8 +184,9 @@ struct ResultsView: View {
                                     }
                                 }
                                 .padding(.bottom, 10)
+                                    
                                 
-                                // MARK: - Recipe Link Button (Moved inside DisclosureGroup)
+                                // MARK: - Recipe Link Button
                                 Button(action: {
                                     if let url = URL(string: meal.url) {
                                         openURL(url)
@@ -215,6 +233,7 @@ struct ResultsView: View {
                         .foregroundColor(.white)
                         .cornerRadius(12)
                         .shadow(radius: 5)
+                        // Note: The transition here is crucial for smooth appearance/disappearance
                         .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                 }
                 Spacer()
@@ -241,7 +260,7 @@ struct ResultsView: View {
                 .padding(.vertical, 10)
                 
             }
-            .background(.ultraThinMaterial) 
+            .background(.ultraThinMaterial)
         }
     }
 }

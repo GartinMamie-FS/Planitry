@@ -58,11 +58,12 @@ struct SpoonacularRecipeDetails: Decodable {
     let extendedIngredients: [SpoonacularIngredient]
     let servings: Int
     let readyInMinutes: Int?
-    let nutrition: SpoonacularNutrition? // Now we can decode the nutrition data
+    let nutrition: SpoonacularNutrition?
 }
 
 struct SpoonacularIngredient: Decodable {
     let original: String
+    let name: String
 }
 
 // MARK: - NETWORK MANAGER (Updated for Spoonacular/RapidAPI)
@@ -70,8 +71,6 @@ struct SpoonacularIngredient: Decodable {
 class NetworkManager: ObservableObject {
     @Published var isFetching = false
     
-    // NOTE: Hardcoded keys can be expired or rate-limited, which might cause errors.
-    // Replace with a valid key for testing.
     private let rapidApiKey = "5050af5467msh883cdbb98183321p15afd6jsn392b7873b3ab"
     
     private let rapidApiHost = "spoonacular-recipe-food-nutrition-v1.p.rapidapi.com"
@@ -118,7 +117,13 @@ class NetworkManager: ObservableObject {
         
         let servings = Double(details.servings)
         let totalTime = Double(details.readyInMinutes ?? 0)
-        let ingredients = details.extendedIngredients.map { $0.original }
+        let originalIngredients = details.extendedIngredients.map { $0.original }
+        
+        let cleanIngredientNames = details.extendedIngredients
+                // Use the 'name' property, and capitalize for better list presentation
+                .map { $0.name.capitalized }
+                // Filter out empty names (for safety)
+                .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         
         // --- Corrected Calories Extraction ---
         // 1. Find the "Calories" nutrient in the array
@@ -139,7 +144,8 @@ class NetworkManager: ObservableObject {
             dietLabels: selectedDiet.lowercased() == "balanced" ? nil : [selectedDiet],
             healthLabels: healthConstraints.isEmpty ? nil : healthConstraints,
             
-            ingredients: ingredients,
+            ingredients: originalIngredients,
+            ingredientNames: cleanIngredientNames,
             totalTime: totalTime,
             
 

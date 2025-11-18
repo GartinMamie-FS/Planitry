@@ -33,6 +33,9 @@ struct InventoryView: View {
     // 🔑 State to control the collapse state of the Add Ingredient card
     @State private var isAddingNewIngredient: Bool = false
     
+    // 🔑 NEW STATE: Tracks the ingredient selected for editing
+    @State private var ingredientToEdit: Ingredient? = nil
+    
     // MARK: - Computed Filtered Inventory
     var filteredInventory: [Ingredient] {
         if searchText.isEmpty {
@@ -68,17 +71,14 @@ struct InventoryView: View {
         isAddingNewIngredient = false
     }
     
+    // 🚨 UPDATED: Simplified delete logic to call the manager's delete function directly
     private func deleteIngredients(offsets: IndexSet) {
-        // Find the original indices in manager.inventory before deleting
+        // Find the actual items from the filtered list
         let itemsToDelete = offsets.map { filteredInventory[$0] }
         
-        // Delete items from the manager
-        manager.inventory.removeAll { item in
-            itemsToDelete.contains(where: { $0.id == item.id })
-        }
-        
-        // Save the updated array to AppStorage (assuming this happens inside manager)
-        // If not, you need to manually call manager.saveInventory() here.
+        // Pass the IDs to the manager for removal from the main list
+        let idsToDelete = itemsToDelete.map { $0.id }
+        manager.removeIngredients(with: idsToDelete)
     }
     
     // MARK: - Save Logic (for ResultsView)
@@ -265,16 +265,35 @@ struct InventoryView: View {
                                 Text("\(item.quantity, specifier: "%.1f") \(item.unit)")
                                     .foregroundColor(.secondary)
                             }
+                            // 🔑 ADD SWIPE ACTIONS FOR EDIT AND DELETE
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                // 1. Delete Action
+                                Button(role: .destructive) {
+                                    // Call the custom delete function which handles the filtered list
+                                    if let index = filteredInventory.firstIndex(where: { $0.id == item.id }) {
+                                        deleteIngredients(offsets: IndexSet(integer: index))
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                
+                                // 2. Edit Action
+                                Button {
+                                    // Set the ingredient to edit to present the sheet
+                                    ingredientToEdit = item
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
                         }
                         // Deletion must use the indices of the filtered list, then remove from the original manager list
+                        // The .onDelete is still useful for Edit Mode
                         .onDelete(perform: deleteIngredients)
                     }
                     .listStyle(.insetGrouped)
-                    // The list naturally expands due to the surrounding VStack and Spacer below.
                 }
                 .padding(.horizontal)
-                
-                
                 
                 // MARK: - Action Button (Triggers Search)
                 if !manager.inventory.isEmpty {
@@ -284,7 +303,7 @@ struct InventoryView: View {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .frame(maxWidth: .infinity)
-                                .padding()
+                                .padding(.vertical, 12)
                                 .background(Color.orange.opacity(0.7))
                                 .cornerRadius(12)
                         } else {
@@ -292,7 +311,7 @@ struct InventoryView: View {
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
-                                .padding()
+                                .padding(.vertical, 12)
                                 .background(Color.orange.opacity(0.9))
                                 .cornerRadius(12)
                                 .shadow(radius: 5)
@@ -306,6 +325,13 @@ struct InventoryView: View {
             }
             .navigationTitle("")
             .navigationBarHidden(true)
+        }
+        // 🔑 EDIT SHEET: Presents the EditIngredientView when ingredientToEdit is non-nil
+        .sheet(item: $ingredientToEdit) { ingredient in
+            EditIngredientView(
+                inventoryManager: manager,
+                ingredient: ingredient
+            )
         }
         // MARK: - Error Alert
         .alert("Search Error", isPresented: Binding(

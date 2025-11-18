@@ -30,6 +30,7 @@ struct MealModel: Codable, Identifiable {
     let dietLabels: [String]?
     let healthLabels: [String]?
     let ingredients: [String]
+    let ingredientNames: [String] // The clean names for the shopping list
     
     // Computed properties
     var ingredientCount: Int {
@@ -55,7 +56,7 @@ struct MealModel: Codable, Identifiable {
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {
         // Local Persistence Keys (Used for saving to and loading from UserDefaults)
-        case id, label, imageUrl, url, source, yield, calories, totalTime, mealType, dietLabels, healthLabels, ingredients
+        case id, label, imageUrl, url, source, yield, calories, totalTime, mealType, dietLabels, healthLabels, ingredients, ingredientNames // 🔑 FIXED: Added ingredientNames here
         
         // API-Specific Keys (ONLY used for decoding from the external network API)
         case uri
@@ -65,7 +66,7 @@ struct MealModel: Codable, Identifiable {
     
     // MARK: - Convenience Initializer (Used by NetworkManager for Mapping)
     // This allows NetworkManager to build a MealModel from its internal API data structs.
-    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String]?, dietLabels: [String]?, healthLabels: [String]?, ingredients: [String], totalTime: Double) {
+    init(id: String, label: String, imageUrl: String, url: String, source: String, yield: Double, calories: Double, mealType: [String]?, dietLabels: [String]?, healthLabels: [String]?, ingredients: [String], ingredientNames: [String], totalTime: Double) { // 🔑 FIXED: Added ingredientNames parameter
         self.id = id
         self.label = label
         self.imageUrl = imageUrl
@@ -77,6 +78,7 @@ struct MealModel: Codable, Identifiable {
         self.dietLabels = dietLabels
         self.healthLabels = healthLabels
         self.ingredients = ingredients
+        self.ingredientNames = ingredientNames // 🔑 FIXED: Assigned ingredientNames
         self.totalTime = totalTime
     }
     
@@ -97,6 +99,7 @@ struct MealModel: Codable, Identifiable {
         try container.encodeIfPresent(dietLabels, forKey: .dietLabels)
         try container.encodeIfPresent(healthLabels, forKey: .healthLabels)
         try container.encode(ingredients, forKey: .ingredients)
+        try container.encode(ingredientNames, forKey: .ingredientNames) // 🔑 FIXED: Added ingredientNames to encode
     }
     
     // MARK: - DECÓDABLE CONFORMANCE (For Local Loading AND API Loading)
@@ -118,9 +121,12 @@ struct MealModel: Codable, Identifiable {
             self.ingredients = try container.decode([String].self, forKey: .ingredientLines) // API key is "ingredientLines"
             self.totalTime = try container.decode(Double.self, forKey: .totalTime)
             
-    
+            // API doesn't provide clean names directly in the summary, so we initialize to an empty array.
+            // NetworkManager will call the convenience initializer later with the populated data.
+            self.ingredientNames = []
+            
             if let decodedId = try? container.decode(String.self, forKey: .id) {
-                 self.id = decodedId
+                self.id = decodedId
             } else if let uri = try? container.decode(String.self, forKey: .uri), let idFragment = uri.split(separator: "_").last {
                 self.id = String(idFragment)
             } else {
@@ -142,6 +148,7 @@ struct MealModel: Codable, Identifiable {
             self.healthLabels = try container.decodeIfPresent([String].self, forKey: .healthLabels)
             self.ingredients = try container.decode([String].self, forKey: .ingredients)
             self.totalTime = try container.decode(Double.self, forKey: .totalTime)
+            self.ingredientNames = try container.decode([String].self, forKey: .ingredientNames) // 🔑 FIXED: Added ingredientNames to decode
         }
     }
 }
