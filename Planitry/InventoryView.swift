@@ -22,10 +22,28 @@ struct InventoryView: View {
     @State private var newIngredientQuantity: String = ""
     @State private var newIngredientUnit: String = ""
     
+    // 🔑 NEW STATE FOR SEARCH FILTERING
+    @State private var searchText: String = ""
+    
     @State private var recipeConstraints: String = ""
     @State private var selectedDiet: String = ""
     
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
+    
+    // 🔑 State to control the collapse state of the Add Ingredient card
+    @State private var isAddingNewIngredient: Bool = false
+    
+    // MARK: - Computed Filtered Inventory
+    var filteredInventory: [Ingredient] {
+        if searchText.isEmpty {
+            return manager.inventory
+        } else {
+            return manager.inventory.filter {
+                // Filter by name, case-insensitive
+                $0.name.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
     
     // MARK: - Add/Delete Logic
     
@@ -45,21 +63,33 @@ struct InventoryView: View {
         newIngredientName = ""
         newIngredientQuantity = ""
         newIngredientUnit = ""
+        
+        // Collapse the view after adding
+        isAddingNewIngredient = false
     }
     
     private func deleteIngredients(offsets: IndexSet) {
-        manager.deleteIngredients(offsets: offsets)
+        // Find the original indices in manager.inventory before deleting
+        let itemsToDelete = offsets.map { filteredInventory[$0] }
+        
+        // Delete items from the manager
+        manager.inventory.removeAll { item in
+            itemsToDelete.contains(where: { $0.id == item.id })
+        }
+        
+        // Save the updated array to AppStorage (assuming this happens inside manager)
+        // If not, you need to manually call manager.saveInventory() here.
     }
     
     // MARK: - Save Logic (for ResultsView)
     
     private func saveRecipeAction(mealToSave: MealModel) {
-            // 1. Use the RecipeManager to save the whole object
-            recipeManager.addRecipe(mealToSave)
-            
-            // 2. Add confirmation print (optional)
-            print("Recipe Saved: \(mealToSave.label) (\(mealToSave.id))")
-        }
+        // 1. Use the RecipeManager to save the whole object
+        recipeManager.addRecipe(mealToSave)
+        
+        // 2. Add confirmation print (optional)
+        print("Recipe Saved: \(mealToSave.label) (\(mealToSave.id))")
+    }
 
     // MARK: - Networking Logic (Moved from RecipeFinderView)
     
@@ -101,7 +131,6 @@ struct InventoryView: View {
             VStack(spacing: 20) {
                 
                 // --- Hidden NavigationLink for Result Transition ---
-                // The destination now passes the foundMeal and the save action.
                 NavigationLink(
                     destination: Group {
                         if let meal = foundMeal {
@@ -128,67 +157,107 @@ struct InventoryView: View {
                     Text("Track what you have on hand to find the perfect recipe.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .padding(.bottom, 10)
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 10)
                 
-                // MARK: - Add Ingredient Card
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("ADD NEW INGREDIENT:")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(.gray)
-                    
-                    Group {
-                        TextField("Name (e.g., Chicken Breast)", text: $newIngredientName)
-                            .padding(.vertical, 8)
+                // MARK: - Conditional Add Ingredient Card
+                
+                if isAddingNewIngredient {
+                    VStack(alignment: .leading, spacing: 15) {
                         
+                        // Header and Collapse Button
                         HStack {
-                            TextField("Quantity (e.g., 2)", text: $newIngredientQuantity)
-                                .keyboardType(.decimalPad)
-                            
-                            TextField("Unit (e.g., lbs, cups, unit)", text: $newIngredientUnit)
+                            Text("ADD NEW INGREDIENT:")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            // Collapse Button
+                            Button(action: { isAddingNewIngredient.toggle() }) {
+                                Image(systemName: "chevron.up.circle.fill")
+                                    .foregroundColor(primaryColor)
+                            }
                         }
+                        
+                        // Input Fields
+                        Group {
+                            TextField("Name (e.g., Chicken Breast)", text: $newIngredientName)
+                                .padding(.vertical, 8)
+                            
+                            HStack {
+                                TextField("Quantity (e.g., 2)", text: $newIngredientQuantity)
+                                    .keyboardType(.decimalPad)
+                                
+                                TextField("Unit (e.g., lbs, cups, unit)", text: $newIngredientUnit)
+                            }
+                        }
+                        .padding(8)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        
+                        // Add Button (The action button)
+                        Button(action: addIngredient) {
+                            Text("Add to Inventory")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(primaryColor.opacity(newIngredientName.isEmpty ? 0.5 : 0.9))
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                        }
+                        .disabled(newIngredientName.isEmpty)
+                        
                     }
-                    .padding(8)
-                    .background(Color.white)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    
-                    // Add Button
-                    Button(action: addIngredient) {
-                        Text("Add to Inventory")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(primaryColor.opacity(newIngredientName.isEmpty ? 0.5 : 0.9))
-                            .cornerRadius(12)
-                            .shadow(radius: 5)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(15)
+                    .shadow(radius: 3)
+                    .padding(.horizontal)
+                } else {
+                    // If the state is false, show a simple button to expand the card
+                    Button(action: { isAddingNewIngredient.toggle() }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add New Ingredient to Pantry")
+                            Spacer()
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(primaryColor.opacity(0.9))
+                        .cornerRadius(12)
+                        .shadow(radius: 5)
                     }
-                    .disabled(newIngredientName.isEmpty)
-                    
+                    .padding(.horizontal)
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(15)
-                .shadow(radius: 3)
-                .padding(.horizontal)
                 
-                
-                // MARK: - Current Inventory List Card
+                // MARK: - Current Inventory List Card (Bigger and Searchable)
                 VStack(alignment: .leading) {
-                    Text("YOUR CURRENT INVENTORY (\(manager.inventory.count))")
+                    Text("YOUR CURRENT INVENTORY (\(filteredInventory.count))") // Updated count
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.gray)
                         .padding(.leading, 5)
                     
+                    // 🔑 SEARCH FIELD
+                    TextField("Search your inventory...", text: $searchText)
+                        .padding(8)
+                        .background(Color(.systemGray5))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 5)
+                        .padding(.bottom, 5)
+                    
                     List {
-                        ForEach(manager.inventory) { item in
+                        // 🔑 LIST USES FILTERED INVENTORY
+                        ForEach(filteredInventory) { item in
                             HStack {
                                 Text(item.name.capitalized)
                                     .fontWeight(.medium)
@@ -197,14 +266,15 @@ struct InventoryView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
+                        // Deletion must use the indices of the filtered list, then remove from the original manager list
                         .onDelete(perform: deleteIngredients)
                     }
                     .listStyle(.insetGrouped)
-                    .cornerRadius(15)
+                    // The list naturally expands due to the surrounding VStack and Spacer below.
                 }
                 .padding(.horizontal)
                 
-                Spacer()
+                
                 
                 // MARK: - Action Button (Triggers Search)
                 if !manager.inventory.isEmpty {

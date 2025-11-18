@@ -25,6 +25,13 @@ struct GroceryListView: View {
     // State for the new item text field
     @State private var newItemName: String = ""
     
+    // State for collapsible sections
+    @State private var isRemainingExpanded: Bool = true
+    @State private var isCheckedExpanded: Bool = false
+    
+    // 🔑 NEW STATE FOR CLEAR ALL CONFIRMATION ALERT
+    @State private var showingClearAllAlert = false
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -76,25 +83,65 @@ struct GroceryListView: View {
                     .foregroundColor(primaryColor)
                 } else {
                     List {
-                        // Section 1: Remaining Items
+                        // Section 1: Remaining Items (Collapsible)
                         if !remainingItems.isEmpty {
-                            Section("Remaining (\(remainingItems.count))") {
-                                ForEach(remainingItems) { item in
-                                    ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                            Section {
+                                // Only show content if expanded
+                                if isRemainingExpanded {
+                                    ForEach(remainingItems) { item in
+                                        ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                                    }
+                                    .onDelete(perform: deleteRemainingItems)
                                 }
-                                .onDelete(perform: deleteRemainingItems)
+                            } header: {
+                                // Custom tappable header to toggle the state
+                                HStack {
+                                    Text("Remaining (\(remainingItems.count))")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.gray)
+                                    Spacer()
+                                    Image(systemName: isRemainingExpanded ? "chevron.up" : "chevron.down")
+                                        .foregroundColor(.secondary)
+                                }
+                                .contentShape(Rectangle()) // Makes the entire HStack tappable
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        isRemainingExpanded.toggle()
+                                    }
+                                }
                             }
                             .headerProminence(.increased)
                         }
                         
-                        // Section 2: Checked Items
+                        // Section 2: Checked Items (Collapsible)
                         if !checkedItems.isEmpty {
-                            Section("Checked (\(checkedItems.count))") {
-                                ForEach(checkedItems) { item in
-                                    ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                            Section {
+                                // Only show content if expanded
+                                if isCheckedExpanded {
+                                    ForEach(checkedItems) { item in
+                                        ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                                    }
+                                    // Allow deletion of checked items
+                                    .onDelete(perform: deleteCheckedItems)
                                 }
-                                // Allow deletion of checked items
-                                .onDelete(perform: deleteCheckedItems)
+                            } header: {
+                                // Custom tappable header to toggle the state
+                                HStack {
+                                    Text("Checked (\(checkedItems.count))")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.gray)
+                                    Spacer()
+                                    Image(systemName: isCheckedExpanded ? "chevron.up" : "chevron.down")
+                                        .foregroundColor(.secondary)
+                                }
+                                .contentShape(Rectangle()) // Makes the entire HStack tappable
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        isCheckedExpanded.toggle()
+                                    }
+                                }
                             }
                         }
                     }
@@ -110,7 +157,8 @@ struct GroceryListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Clear All", role: .destructive) {
-                        listManager.clearList()
+                        // 🔑 Trigger alert instead of clearing immediately
+                        showingClearAllAlert = true
                     }
                     .disabled(listManager.groceryList.isEmpty)
                     .foregroundColor(primaryColor)
@@ -120,6 +168,15 @@ struct GroceryListView: View {
                     EditButton()
                         .foregroundColor(primaryColor)
                 }
+            }
+            // 🔑 ALERT MODIFIER
+            .alert("Confirm Clear List", isPresented: $showingClearAllAlert) {
+                Button("Clear List", role: .destructive) {
+                    listManager.clearList()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to permanently delete all items from your grocery list? This action cannot be undone.")
             }
         }
     }
@@ -140,4 +197,3 @@ struct GroceryListView: View {
         }
     }
 }
-

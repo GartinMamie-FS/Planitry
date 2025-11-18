@@ -9,17 +9,35 @@ import SwiftUI
 import Combine
 
 struct ContentView: View {
-    @StateObject var settings = UserSettings()
-    @StateObject private var inventoryManager = InventoryManager()
-    @StateObject private var listManager = GroceryListManager()
-    
-    // 1. New StateObject for Saved Recipes
-    @StateObject private var recipeManager = RecipeManager()
+    // Managers must be declared first
+    @StateObject var settings: UserSettings
+    @StateObject private var inventoryManager: InventoryManager
+    @StateObject private var listManager: GroceryListManager
+    @StateObject private var recipeManager: RecipeManager
     
     // State to control whether the splash screen is visible
     @State private var isLoading = true
     
+    // MARK: - Custom Initializer for Manager Linking
+    init() {
+        // 1. Initialize core managers
+        let settings = UserSettings()
+        let inventory = InventoryManager()
+        let recipe = RecipeManager()
+        
+        // 2. Initialize GroceryListManager, passing the InventoryManager's method as the handler
+        let groceryList = GroceryListManager(
+            inventoryTransferHandler: inventory.receivePurchasedItem
+        )
+        
+        // 3. Assign managers to @StateObject properties
+        self._settings = StateObject(wrappedValue: settings)
+        self._inventoryManager = StateObject(wrappedValue: inventory)
+        self._recipeManager = StateObject(wrappedValue: recipe)
+        self._listManager = StateObject(wrappedValue: groceryList)
+    }
 
+    // MARK: - View Body
     var body: some View {
         
         ZStack {
@@ -48,7 +66,7 @@ struct ContentView: View {
                         .tabItem {
                             Label("Inventory", systemImage: "archivebox.fill")
                         }
-                        .environmentObject(inventoryManager)
+                        // Note: environment object is also set at the ZStack level
                     
                     // Tab 3: Grocery List
                     GroceryListView()
@@ -56,21 +74,19 @@ struct ContentView: View {
                             Label("Grocery List", systemImage: "list.bullet.clipboard.fill")
                         }
                     
-                    // 🔥 NEW TAB: My Recipes
+                    // Tab 4: My Recipes
                     RecipeView()
                         .tabItem {
                             Label("My Recipes", systemImage: "book.closed.fill")
                         }
-                        .environmentObject(recipeManager)
                     
-                    // Tab 5: Preferences (was Tab 4)
+                    // Tab 5: Preferences
                     PreferencesView()
                         .tabItem {
                             Label("Preferences", systemImage: "gearshape.fill")
                         }
                 }
                 .accentColor(Color(red: 0.8, green: 0.2, blue: 0.1))
-                .environmentObject(listManager)
                 
                 .fullScreenCover(isPresented: .constant(!settings.hasCompletedOnboarding)) {
                     OnboardingFlowView()
@@ -78,9 +94,10 @@ struct ContentView: View {
                 }
             }
         }
+        // Set all environment objects at the highest level for all tabs
         .environmentObject(settings)
-        .environmentObject(recipeManager)
         .environmentObject(inventoryManager)
         .environmentObject(listManager)
+        .environmentObject(recipeManager)
     }
 }
