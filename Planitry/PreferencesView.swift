@@ -29,17 +29,23 @@ struct PreferencesView: View {
                 // 3. Move Form content here
                 Form {
                     // MARK: - Section 1: Dietary Label
-                    Section(header: Text("Dietary Preference (Required)")) {
+                    Section {
                         Picker("Select Diet", selection: $selectedDietOption) {
                             ForEach(MealConstraints.DietOption.allCases) { dietOption in
                                 Text(dietOption.rawValue)
                                     .tag(dietOption)
                             }
                         }
+                    } header: {
+                        // ⭐️ APPLY CONSISTENT STYLING HERE
+                        Text("DIETARY PREFERENCE (REQUIRED)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.gray)
                     }
                     
                     // MARK: - Section 2: Calorie Budget
-                    Section(header: Text("Maximum Calories Daily (Required)")) {
+                    Section {
                         Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
                             HStack {
                                 Text("Max Calories:")
@@ -49,13 +55,25 @@ struct PreferencesView: View {
                                     .fontWeight(.medium)
                             }
                         }
+                    } header: {
+                        // ⭐️ APPLY CONSISTENT STYLING HERE
+                        Text("MAXIMUM CALORIES DAILY (REQUIRED)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.gray)
                     }
                     
                     // MARK: - Section 3: Health Constraints
-                    Section(header: Text("Health Constraints (Optional)")) {
+                    Section {
                         ForEach(HealthConstraint.allCases) { constraint in
                             Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
                         }
+                    } header: {
+                        // ⭐️ APPLY CONSISTENT STYLING HERE
+                        Text("HEALTH CONSTRAINTS (OPTIONAL)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.gray)
                     }
                 }
                 // 🔑 4. Remove .navigationTitle("Meal Preferences") from Form's modifier chain
