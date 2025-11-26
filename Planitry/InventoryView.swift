@@ -30,9 +30,6 @@ struct InventoryView: View {
     
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
-    // 🔑 State to control the collapse state of the Add Ingredient card
-    @State private var isAddingNewIngredient: Bool = false
-    
     // 🔑 NEW STATE: Tracks the ingredient selected for editing
     @State private var ingredientToEdit: Ingredient? = nil
     
@@ -51,27 +48,27 @@ struct InventoryView: View {
     // MARK: - Add/Delete Logic
     
     private func addIngredient() {
-        guard let quantity = Double(newIngredientQuantity.trimmingCharacters(in: .whitespaces)),
-              !newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty else {
+        // We will default quantity to 1.0 and unit to "unit" if fields are empty
+        let quantityString = newIngredientQuantity.trimmingCharacters(in: .whitespaces)
+        let unitString = newIngredientUnit.trimmingCharacters(in: .whitespaces)
+        
+        guard !newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty else {
             return
         }
         
         manager.addIngredient(
             name: newIngredientName,
-            quantity: quantity,
-            unit: newIngredientUnit
+            quantity: Double(quantityString) ?? 1.0, // Default to 1.0
+            unit: unitString.isEmpty ? "unit" : unitString // Default to "unit"
         )
         
         // Reset fields
         newIngredientName = ""
         newIngredientQuantity = ""
         newIngredientUnit = ""
-        
-        // Collapse the view after adding
-        isAddingNewIngredient = false
     }
     
-    // 🚨 UPDATED: Simplified delete logic to call the manager's delete function directly
+    // Simplified delete logic to call the manager's delete function directly
     private func deleteIngredients(offsets: IndexSet) {
         // Find the actual items from the filtered list
         let itemsToDelete = offsets.map { filteredInventory[$0] }
@@ -128,7 +125,7 @@ struct InventoryView: View {
     // MARK: - View Body
     var body: some View {
         NavigationView {
-            // 💡 KEY CHANGE: Use VStack(spacing: 0) for consistent banner placement
+            // Use VStack(spacing: 0) for consistent banner placement
             VStack(spacing: 0) {
                 
                 // --- Hidden NavigationLink for Result Transition ---
@@ -172,78 +169,50 @@ struct InventoryView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         
-                        // MARK: - Conditional Add Ingredient Card
-                        if isAddingNewIngredient {
-                            VStack(alignment: .leading, spacing: 15) {
-                                
-                                // Header and Collapse Button
-                                HStack {
-                                    Text("ADD NEW INGREDIENT:")
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.gray)
-                                    Spacer()
-                                    // Collapse Button
-                                    Button(action: { isAddingNewIngredient.toggle() }) {
-                                        Image(systemName: "chevron.up.circle.fill")
-                                            .foregroundColor(primaryColor)
-                                    }
-                                }
-                                
-                                // Input Fields
-                                Group {
-                                    TextField("Name (e.g., Chicken Breast)", text: $newIngredientName)
-                                        .padding(.vertical, 8)
-                                    
-                                    HStack {
-                                        TextField("Quantity (e.g., 2)", text: $newIngredientQuantity)
-                                            .keyboardType(.decimalPad)
-                                        
-                                        TextField("Unit (e.g., lbs, cups, unit)", text: $newIngredientUnit)
-                                    }
-                                }
-                                .padding(8)
-                                .background(Color.white)
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        // ✅ MARK: - GROCERY LIST STYLE INPUT FIELD
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("ADD NEW INGREDIENT:")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5)
+
+                            // 🔑 MAIN INPUT ROW (Mimicking Grocery List)
+                            HStack {
+                                // Combined Text Field
+                                TextField(
+                                    "Name (e.g., 2 lbs Chicken Breast)", // Example hint for multiple fields
+                                    text: $newIngredientName
                                 )
+                                .padding(.leading, 10)
                                 
-                                // Add Button (The action button)
-                                Button(action: addIngredient) {
-                                    Text("Add to Inventory")
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding()
-                                        .background(primaryColor.opacity(newIngredientName.isEmpty ? 0.5 : 0.9))
-                                        .cornerRadius(12)
-                                        .shadow(radius: 5)
-                                }
-                                .disabled(newIngredientName.isEmpty)
+                                // Condensed Quantity Field
+                                TextField("Qty", text: $newIngredientQuantity)
+                                    .keyboardType(.decimalPad)
+                                    .frame(width: 50)
+                                    .multilineTextAlignment(.trailing)
                                 
-                            }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(15)
-                            .shadow(radius: 3)
-                        } else {
-                            // If the state is false, show a simple button to expand the card
-                            Button(action: { isAddingNewIngredient.toggle() }) {
-                                HStack {
+                                // Condensed Unit Field
+                                TextField("Unit", text: $newIngredientUnit)
+                                    .frame(width: 50)
+                                    .multilineTextAlignment(.trailing)
+                                
+                                // Add Button
+                                Button {
+                                    addIngredient()
+                                } label: {
                                     Image(systemName: "plus.circle.fill")
-                                    Text("Add New Ingredient to Pantry")
-                                    Spacer()
+                                        .font(.title)
+                                        .foregroundColor(primaryColor)
                                 }
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(primaryColor.opacity(0.9))
-                                .cornerRadius(12)
-                                .shadow(radius: 5)
+                                .disabled(newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty)
+                                .padding(.trailing, 5)
                             }
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 5)
+                            
                         }
                         
                         // MARK: - Current Inventory List Card (Bigger and Searchable)
@@ -262,11 +231,6 @@ struct InventoryView: View {
                                 .padding(.horizontal, 5)
                                 .padding(.bottom, 5)
                             
-                            // The List needs an explicit height/frame inside a ScrollView,
-                            // or use the whole ScrollView for the list content.
-                            // To maintain the card look, we'll give the list a max frame.
-                            // The original code used List inside VStack without a height, which is problematic.
-                            // For a list inside a scrollable VStack, use a fixed or maximized frame.
                             List {
                                 // 🔑 LIST USES FILTERED INVENTORY
                                 ForEach(filteredInventory) { item in
@@ -299,12 +263,13 @@ struct InventoryView: View {
                                         .tint(.blue)
                                     }
                                 }
-                                // Deletion must use the indices of the filtered list, then remove from the original manager list
-                                // The .onDelete is still useful for Edit Mode
+                                
                                 .onDelete(perform: deleteIngredients)
                             }
                             .listStyle(.insetGrouped)
-                            // 💡 KEY CHANGE: Explicitly set a frame for the List inside a ScrollView
+                            
+                            // Adjust the height calculation for the List to avoid nesting scroll views, but allow it to grow.
+                            // The outer ScrollView will handle the primary scrolling.
                             .frame(height: max(200, CGFloat(filteredInventory.count) * 50))
                             
                         }
