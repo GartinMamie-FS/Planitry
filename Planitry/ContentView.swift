@@ -5,6 +5,7 @@
 //  Created by Mamie Gartin on 10/7/25.
 //
 
+// MARK: - ContentView
 import SwiftUI
 import Combine
 
@@ -15,9 +16,9 @@ struct ContentView: View {
     @StateObject private var listManager: GroceryListManager
     @StateObject private var recipeManager: RecipeManager
     
-    // State to control whether the splash screen is visible
-    @State private var isLoading = true
-    
+    // State to control whether the landing page is visible
+    @State private var showLandingPage = true // Changed to control landing page
+
     // MARK: - Custom Initializer for Manager Linking
     init() {
         // 1. Initialize core managers
@@ -41,19 +42,11 @@ struct ContentView: View {
     var body: some View {
         
         ZStack {
-            // Conditional View Rendering: Show SplashView OR TabView
-            if isLoading {
-                SplashView()
-                    .onAppear {
-                        // Use DispatchQueue to simulate network call latency
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            withAnimation(.easeInOut(duration: 0.5)) {
-                                self.isLoading = false // Hide splash screen
-                            }
-                        }
-                    }
+            // Conditional View Rendering: Show LandingPageView OR TabView
+            if showLandingPage {
+                LandingPageView(showLandingPage: $showLandingPage) // Pass the binding
             } else {
-                // If loading is complete, show the main TabView
+                // If landing page is dismissed, show the main TabView
                 TabView {
                     // Tab 1: Planner
                     PlannerView()
@@ -66,7 +59,6 @@ struct ContentView: View {
                         .tabItem {
                             Label("Inventory", systemImage: "archivebox.fill")
                         }
-                        // Note: environment object is also set at the ZStack level
                     
                     // Tab 3: Grocery List
                     GroceryListView()
