@@ -87,7 +87,7 @@ struct InventoryView: View {
         // 2. Add confirmation print (optional)
         print("Recipe Saved: \(mealToSave.label) (\(mealToSave.id))")
     }
-
+    
     // MARK: - Networking Logic (Moved from RecipeFinderView)
     
     private func performRecipeSearch() {
@@ -125,28 +125,26 @@ struct InventoryView: View {
     // MARK: - View Body
     var body: some View {
         NavigationView {
-            // Use VStack(spacing: 0) for consistent banner placement
+            // Use a main VStack to stack the Banner/Input, the Scrollable List, and the Fixed Button
             VStack(spacing: 0) {
                 
-                // --- Hidden NavigationLink for Result Transition ---
+                // --- Hidden NavigationLink for Result Transition (Stays Hidden) ---
+                // ... (NavigationLink code remains the same) ...
                 NavigationLink(
                     destination: Group {
                         if let meal = foundMeal {
                             ResultsView(
                                 meal: meal,
-                                onSave: saveRecipeAction // Pass the save action
+                                onSave: saveRecipeAction
                             )
                         } else {
-                            // 💡 Added loading view for consistency with PlannerView
                             VStack(spacing: 15) {
                                 ProgressView()
                                     .scaleEffect(1.5, anchor: .center)
                                     .progressViewStyle(CircularProgressViewStyle(tint: primaryColor))
-                                    
                                 Text("Searching for recipes based on your pantry...")
                                     .font(.title3)
                                     .foregroundColor(.secondary)
-                                    
                                 Text("Pantry: \(manager.inventory.count) ingredients | Diet: \(settings.selectedDiet.capitalized)")
                                     .font(.caption)
                                     .foregroundColor(.gray)
@@ -159,133 +157,117 @@ struct InventoryView: View {
                 )
                 .hidden()
                 
-                // ⭐️ MARK: - HEADER (REPLACED WITH BANNERVIEW)
-                BannerView(
-                    title: "Inventory",
-                    subtitle: "Track what you have to find the perfect recipe."
-                )
-                
-                // ✅ KEY CHANGE: Move Add Ingredient Input HERE (outside the ScrollView)
-                VStack(alignment: .leading, spacing: 10) {
+                // ⭐️ MARK: - SECTION 1: HEADER & ADD INPUT (Fixed at Top)
+                VStack(spacing: 0) {
+                    BannerView(
+                        title: "Inventory",
+                        subtitle: "Track what you have to find the perfect recipe."
+                    )
                     
-                    // ✅ MARK: - GROCERY LIST STYLE INPUT FIELD
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("ADD NEW INGREDIENT:")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.gray)
-                            .padding(.leading, 5)
-
-                        // 🔑 MAIN INPUT ROW (Mimicking Grocery List)
-                        HStack {
-                            // Combined Text Field
-                            TextField(
-                                "Name (e.g., 2 lbs Chicken Breast)", // Example hint for multiple fields
-                                text: $newIngredientName
-                            )
-                            
-                            // Condensed Quantity Field
-                            TextField("Qty", text: $newIngredientQuantity)
-                                .keyboardType(.decimalPad)
-                                .frame(width: 50)
-                                .multilineTextAlignment(.trailing)
-
-                            // Condensed Unit Field
-                            TextField("Unit", text: $newIngredientUnit)
-                                .frame(width: 50)
-                                .multilineTextAlignment(.trailing)
-
-                            // Add Button
-                            Button {
-                                addIngredient()
-                            } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title)
-                                    .foregroundColor(primaryColor)
-                            }
-                            .disabled(newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty)
-                            .padding(.trailing, 5) // Keep the trailing padding for the button
-                        }
-                        .padding(10)                         .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        .padding(.horizontal, 5)
-                        
-                    }
-                    
-                }
-                .padding(.horizontal) // Apply horizontal padding to the overall input block
-                .padding(.top, 20) // Add top padding to separate from banner
-                .padding(.bottom, 10)
-                
-                // 💡 Wrap the rest of the content (Inventory List) in a ScrollView
-                ScrollView {
-                    VStack(spacing: 20) {
-                        
-                        // MARK: - Current Inventory List Card (Bigger and Searchable)
-                        VStack(alignment: .leading) {
-                            Text("YOUR CURRENT INVENTORY (\(filteredInventory.count))") // Updated count
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("ADD NEW INGREDIENT:")
                                 .font(.caption)
                                 .fontWeight(.bold)
                                 .foregroundColor(.gray)
                                 .padding(.leading, 5)
                             
-                            // 🔑 SEARCH FIELD
-                            TextField("Search your inventory...", text: $searchText)
-                                .padding(8)
-                                .background(Color(.systemGray5))
-                                .cornerRadius(8)
-                                .padding(.horizontal, 5)
-                                .padding(.bottom, 5)
-                            
-                            List {
-                                // 🔑 LIST USES FILTERED INVENTORY
-                                ForEach(filteredInventory) { item in
-                                    HStack {
-                                        Text(item.name.capitalized)
-                                            .fontWeight(.medium)
-                                        Spacer()
-                                        Text("\(item.quantity, specifier: "%.1f") \(item.unit)")
-                                            .foregroundColor(.secondary)
-                                    }
-                                    // 🔑 ADD SWIPE ACTIONS FOR EDIT AND DELETE
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        // 1. Delete Action
-                                        Button(role: .destructive) {
-                                            // Call the custom delete function which handles the filtered list
-                                            if let index = filteredInventory.firstIndex(where: { $0.id == item.id }) {
-                                                deleteIngredients(offsets: IndexSet(integer: index))
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        
-                                        // 2. Edit Action
-                                        Button {
-                                            // Set the ingredient to edit to present the sheet
-                                            ingredientToEdit = item
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        .tint(.blue)
-                                    }
-                                }
+                            HStack {
+                                TextField(
+                                    "Name (e.g., Chicken Breast)", // Shortened the hint for clarity
+                                    text: $newIngredientName
+                                )
                                 
-                                .onDelete(perform: deleteIngredients)
+                                TextField("Qty", text: $newIngredientQuantity)
+                                    .keyboardType(.decimalPad)
+                                    .frame(width: 50)
+                                    .multilineTextAlignment(.trailing)
+                                
+                                TextField("Unit", text: $newIngredientUnit)
+                                    .frame(width: 50)
+                                    .multilineTextAlignment(.trailing)
+                                
+                                Button {
+                                    addIngredient()
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title)
+                                        .foregroundColor(primaryColor)
+                                }
+                                .disabled(newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty)
+                                .padding(.trailing, 5)
                             }
-                            .listStyle(.insetGrouped)
-                            
-                            .frame(height: max(200, CGFloat(filteredInventory.count) * 50))
-                            
+                            .padding(10)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 5)
                         }
-                        
                     }
                     .padding(.horizontal)
-                } // End ScrollView
+                    .padding(.top, 20)
+                    .padding(.bottom, 10)
+                }
+                // --------------------------------------------------------
                 
-                // MARK: - Action Button (Triggers Search - Now FIXED at the bottom)
-                // 💡 KEY CHANGE: Moved the button outside the ScrollView
-                if !manager.inventory.isEmpty {
+                // MARK: - SECTION 2: SCROLLABLE INVENTORY LIST
+                // We use a List here instead of embedding a List in a ScrollView
+                // and apply .frame(maxHeight: .infinity) to fill the center space.
+                VStack(alignment: .leading, spacing: 5) {
                     
+                    Text("YOUR CURRENT INVENTORY (\(filteredInventory.count))")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.gray)
+                        .padding(.leading, 15) // Adjust padding to align with List inset
+                    
+                    TextField("Search your inventory...", text: $searchText)
+                        .padding(8)
+                        .background(Color(.systemGray5))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 15) // Adjust padding
+                        .padding(.bottom, 5)
+                    
+                    List {
+                        // 🔑 The List will now naturally handle scrolling and height
+                        // if it exceeds the available space in the middle.
+                        ForEach(filteredInventory) { item in
+                            HStack {
+                                Text(item.name.capitalized)
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text("\(item.quantity, specifier: "%.1f") \(item.unit)")
+                                    .foregroundColor(.secondary)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                // ... (Swipe actions remain the same) ...
+                                Button(role: .destructive) {
+                                    if let index = filteredInventory.firstIndex(where: { $0.id == item.id }) {
+                                        deleteIngredients(offsets: IndexSet(integer: index))
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                
+                                Button {
+                                    ingredientToEdit = item
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                        }
+                        .onDelete(perform: deleteIngredients)
+                    }
+                    // Removing the problematic .frame(height: max(...))
+                    .listStyle(.insetGrouped)
+                    // 🔑 Use .frame(maxHeight: .infinity) to let the List fill the remaining vertical space
+                    .frame(maxHeight: .infinity)
+                    
+                }
+                // --------------------------------------------------------
+                
+                // MARK: - SECTION 3: ACTION BUTTON (Fixed at Bottom)
+                if !manager.inventory.isEmpty {
                     Button(action: performRecipeSearch) {
                         if networkManager.isFetching {
                             ProgressView()
@@ -305,24 +287,24 @@ struct InventoryView: View {
                                 .shadow(radius: 5)
                         }
                     }
+                    .padding(.top , 10)
                     .padding(.horizontal)
                     .padding(.bottom)
                     .disabled(networkManager.isFetching)
                 }
-                
             }
-          
+            
             .navigationTitle("")
             .navigationBarHidden(true)
         }
-      
+        
+        // ... (Sheet and Alert modifiers remain the same) ...
         .sheet(item: $ingredientToEdit) { ingredient in
             EditIngredientView(
                 inventoryManager: manager,
                 ingredient: ingredient
             )
         }
-        // MARK: - Error Alert
         .alert("Search Error", isPresented: Binding(
             get: { alertError != nil },
             set: { _ in alertError = nil }
