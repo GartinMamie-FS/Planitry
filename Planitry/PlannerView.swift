@@ -50,7 +50,7 @@ struct PlannerView: View {
     // MARK: - Network Action Function
     func generateMeal() {
         alertError = nil
-        self.showResults = true // 👈 ADD THIS LINE
+        self.showResults = true
 
         // 1. Construct constraints object from user settings
         let constraints = MealConstraints(
@@ -89,117 +89,124 @@ struct PlannerView: View {
     // MARK: - View Body
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: 0) { // Top-level VStack controls structure
                 
-                // --- Hidden NavigationLink for Result Transition ---
-                NavigationLink(
-                                    destination: Group {
-                                        if let meal = foundMeal {
-                                            ResultsView(
-                                                meal: meal,
-                                                onSave: saveMeal // Pass the action closure
-                                            )
-                                        } else {
-                                            VStack(spacing: 15) {
-                                                ProgressView()
-                                                    .scaleEffect(1.5, anchor: .center)
-                                                    .progressViewStyle(CircularProgressViewStyle(tint: primaryColor))
-                                                
-                                                Text("Searching for the perfect meal...")
-                                                    .font(.title3)
-                                                    .foregroundColor(.secondary)
-                                                
-                                                Text("Based on your \(settings.selectedDiet.capitalized) diet and \(settings.maxCalories / 3) kcal limit.")
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                            }
-                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                        }
-                                    },
-                                    isActive: $showResults,
-                                    label: { EmptyView() }
+                // MARK: - Header (BannerView)
+                // This is OUTSIDE the ScrollView's padding, allowing it to stretch.
+                BannerView(
+                    title: "Meal Planner",
+                    subtitle: "Crafting your next meal idea."
                 )
-                .hidden()
-                
-                // MARK: - Header
-                VStack(spacing: 8) {
-                    Text("Single Meal Generator")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundColor(primaryColor)
-                        .padding(.top, 20)
-                    
-                    Text("Get a quick recipe idea based on your dietary preferences.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.bottom, 20)
-                
-                // MARK: - 1. Select Meal Time Card
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("SELECT MEAL TIME:")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(.gray)
-                    
-                    HStack {
-                        ForEach(MealType.allCases) { meal in
-                            MealTimeButton(
-                                meal: meal,
-                                selectedMealType: $selectedMealType,
-                                primaryColor: primaryColor
-                            )
+
+                // The rest of the content goes inside a ScrollView for necessary padding
+                // and to allow the constraints cards to be scrollable.
+                ScrollView {
+                    VStack(spacing: 20) {
+                        
+                        // --- Hidden NavigationLink for Result Transition ---
+                        NavigationLink(
+                            destination: Group {
+                                if let meal = foundMeal {
+                                    ResultsView(
+                                        meal: meal,
+                                        onSave: saveMeal // Pass the action closure
+                                    )
+                                } else {
+                                    VStack(spacing: 15) {
+                                        ProgressView()
+                                            .scaleEffect(1.5, anchor: .center)
+                                            .progressViewStyle(CircularProgressViewStyle(tint: primaryColor))
+                                            
+                                        Text("Searching for the perfect meal...")
+                                            .font(.title3)
+                                            .foregroundColor(.secondary)
+                                            
+                                        Text("Based on your \(settings.selectedDiet.capitalized) diet and \(settings.maxCalories / 3) kcal limit.")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                }
+                            },
+                            isActive: $showResults,
+                            label: { EmptyView() }
+                        )
+                        .hidden()
+                        
+                        // MARK: - 1. Select Meal Time Card
+                        VStack(alignment: .leading, spacing: 15) {
+                            Text("SELECT MEAL TIME:")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                ForEach(MealType.allCases) { meal in
+                                    MealTimeButton(
+                                        meal: meal,
+                                        selectedMealType: $selectedMealType,
+                                        primaryColor: primaryColor
+                                    )
+                                }
+                            }
                         }
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(15)
-                .shadow(radius: 3)
-                
-                // MARK: - 2. Current Constraints Card
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Current Constraints:")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.black)
-                        .padding(.bottom, 4)
-                    
-                    HStack {
-                        Text("Diet:")
-                            .fontWeight(.medium)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(15)
+                        .shadow(radius: 3)
+                        
+                        // MARK: - 2. Current Constraints Card
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Current Constraints:")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
+                                .padding(.bottom, 4)
+                            
+                            HStack {
+                                Text("Diet:")
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text(settings.selectedDiet.capitalized)
+                                    .foregroundColor(primaryColor)
+                            }
+                            
+                            HStack {
+                                Text("Health Labels:")
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text(constraintsDisplay)
+                                    .foregroundColor(.orange)
+                                    .multilineTextAlignment(.trailing)
+                            }
+                            
+                            HStack {
+                                Text("Max Calories (Recipe Est.):")
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text("\(settings.maxCalories / 3) kcal")
+                                    .foregroundColor(primaryColor)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemYellow).opacity(0.1))
+                        .cornerRadius(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        
                         Spacer()
-                        Text(settings.selectedDiet.capitalized)
-                            .foregroundColor(primaryColor)
+                        
+                        // MARK: - 3. Generate Button (Note: The button is better outside the ScrollView)
+                        // Moving the button outside the ScrollView ensures it's always visible.
                     }
-                    
-                    HStack {
-                        Text("Health Labels:")
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text(constraintsDisplay)
-                            .foregroundColor(.orange)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    
-                    HStack {
-                        Text("Max Calories (Recipe Est.):")
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text("\(settings.maxCalories / 3) kcal")
-                            .foregroundColor(primaryColor)
-                    }
-                }
-                .padding()
-                .background(Color(.systemYellow).opacity(0.1))
-                .cornerRadius(15)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
+                    // Apply horizontal padding to the scrollable content
+                    .padding(.horizontal)
+                    .padding(.top, 20) // Add top padding to separate from banner
+                } // End ScrollView
                 
-                Spacer()
-                
-                // MARK: - 3. Generate Button
+                // MARK: - 3. Generate Button (Moved outside ScrollView)
                 Button(action: generateMeal) {
                     if networkManager.isFetching {
                         ProgressView()
@@ -220,12 +227,10 @@ struct PlannerView: View {
                     }
                 }
                 .padding(.horizontal)
+                .padding(.bottom) // Add some bottom padding above the edge
                 .disabled(networkManager.isFetching)
-                
-                Spacer()
-                
-            }
-            .padding()
+
+            } // End top-level VStack
             .navigationTitle("")
             .navigationBarHidden(true)
         }

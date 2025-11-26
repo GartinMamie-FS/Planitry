@@ -57,7 +57,6 @@ class RecipeManager: ObservableObject {
 }
 
 
-
 struct RecipeView: View {
     @EnvironmentObject var recipeManager: RecipeManager
     
@@ -66,41 +65,49 @@ struct RecipeView: View {
 
     var body: some View {
         NavigationView {
-            List {
-                // Iterate over the published array from the manager
-                ForEach(recipeManager.savedRecipes) { meal in
-                    // Use a NavigationLink to view the saved recipe details
-                    NavigationLink(destination: SavedRecipeDetailView(meal: meal)) {
-                        RecipeRow(meal: meal) // Create a simple row view
-                    }
-                }
-                .onDelete(perform: recipeManager.deleteRecipe) // Add swipe-to-delete functionality
-            }
-            .navigationTitle("My Recipes")
-            
-            // Apply the custom font style to the title
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("My Recipes (\(recipeManager.savedRecipes.count))")
-                        .font(.system(size: 30, weight: .bold)) // Match PlannerView style
-                        .foregroundColor(primaryColor)          // Apply custom color
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            
-            // Optional: Show a message if the list is empty
-            .overlay {
+            // 🔑 Wrap content in a VStack for banner integration
+            VStack(spacing: 0) {
+                
+                // 🔑 1. Banner View
+                BannerView(
+                    title: "My Recipes", // Consistent app name
+                    subtitle: "Manage recipes and re-cook favorites!" // Clever contextual subtitle
+                )
+                
+                // The main content area (List)
                 if recipeManager.savedRecipes.isEmpty {
                     ContentUnavailableView(
                         "No Saved Recipes",
                         systemImage: "bookmark.slash",
                         description: Text("Tap 'Save Recipe' on a meal idea to see it appear here.")
                     )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) // Make ContentUnavailableView fill space
+                } else {
+                    List {
+                        // Iterate over the published array from the manager
+                        ForEach(recipeManager.savedRecipes) { meal in
+                            // Use a NavigationLink to view the saved recipe details
+                            NavigationLink(destination: SavedRecipeDetailView(meal: meal)) {
+                                RecipeRow(meal: meal) // Create a simple row view
+                            }
+                        }
+                        .onDelete(perform: recipeManager.deleteRecipe) // Add swipe-to-delete functionality
+                    }
+                    .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
                 }
-            }
+            } // End main VStack
+            
+            // 🔑 2. Navigation bar adjustments (removing custom title styling)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            
+            // 🔑 REMOVED .toolbar {} BLOCK ENTIRELY to eliminate the EditButton.
         }
     }
 }
+
+// NOTE: RecipeManager, RecipeRow, and SavedRecipeDetailView remain unchanged.
 struct RecipeRow: View {
     let meal: MealModel
 
@@ -136,74 +143,124 @@ struct SavedRecipeDetailView: View {
     
     // 1. Get the tool to open external URLs
     @Environment(\.openURL) var openURL
+    
+    // Define the primary color to match ResultsView
+    let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
+
+    // State to control the DisclosureGroup
+    @State private var isIngredientsExpanded: Bool = true // Start expanded for a saved recipe
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 
-                // --- Image Section ---
+                // MARK: - Meal Image (Matches ResultsView)
                 AsyncImage(url: URL(string: meal.imageUrl)) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
                             .scaledToFill()
-                    } else {
-                        Image(systemName: "fork.knife.circle.fill")
+                    } else if phase.error != nil {
+                        Image(systemName: "photo.circle.fill")
                             .resizable()
                             .scaledToFit()
                             .frame(height: 250)
                             .foregroundColor(.gray)
+                    } else {
+                        ProgressView()
+                            .frame(height: 250)
                     }
                 }
                 .frame(height: 250)
                 .clipped()
                 
-                // 2. Add the View Full Recipe Button
-                if !meal.url.isEmpty, let url = URL(string: meal.url) {
+                // MARK: - Meal Details Card (Adopted from ResultsView)
+                VStack(alignment: .leading, spacing: 15) {
                     
-                    Button {
-                        // Action: Use the openURL environment variable to open the link
-                        openURL(url)
-                    } label: {
-                        Text("View Full Recipe on \(meal.source)")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red) // Use your accent color
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    
-                } else {
-                    // Fallback if the URL is missing or empty
-                    Text("Recipe source link unavailable.")
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                }
-                
-                // --- Details and Ingredients Section ---
-                VStack(alignment: .leading, spacing: 10) {
+                    // Meal Name
                     Text(meal.label)
                         .font(.largeTitle)
                         .fontWeight(.heavy)
+                        .foregroundColor(.black)
                     
-                    Text("Source: \(meal.source)") // Display the source name
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("Ingredients:")
-                        .font(.title2)
-                        .fontWeight(.medium)
-
-                    ForEach(meal.ingredients, id: \.self) { ingredient in
-                        Text("• \(ingredient)")
-                            .font(.body)
+                    // Calorie Count
+                    HStack {
+                        Image(systemName: "flame.fill")
+                            .foregroundColor(.orange)
+                        Text("Calories Per Serving:")
+                            .fontWeight(.medium)
+                        Text("\(meal.calculatedCalories) kcal")
+                            .fontWeight(.bold)
+                            .foregroundColor(primaryColor)
                     }
+                    .font(.title3)
+                    
+                    Text("Yields: \(Int(meal.yield)) servings (Total Recipe Calories: \(Int(meal.calories.rounded())) kcal)")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
+                    Divider()
+                    
+                    // MARK: - Collapsible Ingredients List (Adopted from ResultsView)
+                    DisclosureGroup(
+                        "Ingredients (\(meal.ingredientCount))",
+                        isExpanded: $isIngredientsExpanded // Controls expansion state
+                    ) {
+                        VStack(alignment: .leading, spacing: 15) {
+                            
+                            // Ingredient list
+                            // We only display the ingredients here since this is a saved view.
+                            ForEach(meal.ingredients, id: \.self) { originalIngredient in
+                                HStack(alignment: .top) {
+                                    Image(systemName: "circle.fill")
+                                        .font(.system(size: 8))
+                                        .foregroundColor(primaryColor)
+                                        .padding(.top, 5)
+                                            
+                                    // Display the full original ingredient text (e.g., "1/2 cup milk")
+                                    Text(originalIngredient)
+                                        .font(.body)
+                                    Spacer()
+                                }
+                            }
+                            .padding(.bottom, 10)
+                            
+                            // MARK: - Recipe Link Button (Adopted from ResultsView Style)
+                            if !meal.url.isEmpty, let url = URL(string: meal.url) {
+                                Button(action: {
+                                    openURL(url)
+                                    print("Attempting to open recipe at: \(meal.url)")
+                                }) {
+                                    HStack {
+                                        Image(systemName: "link.circle.fill")
+                                        Text("View Full Recipe Instructions from \(meal.source)")
+                                    }
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(primaryColor)
+                                    .cornerRadius(10)
+                                }
+                                .padding(.top, 10)
+                            } else {
+                                Text("Recipe instructions link unavailable.")
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 10)
+                            }
+                        }
+                        .padding(.leading) // Indent the content
+                    }
+                    .font(.headline)
+                    .accentColor(primaryColor) // Color for the arrow
+                    
                 }
                 .padding(.horizontal)
+                .padding(.bottom, 30) // Add bottom padding for better scroll experience
+                
             }
         }
+        .edgesIgnoringSafeArea(.top)
         .navigationTitle(meal.label)
         .navigationBarTitleDisplayMode(.inline)
     }

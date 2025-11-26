@@ -128,7 +128,8 @@ struct InventoryView: View {
     // MARK: - View Body
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            // 💡 KEY CHANGE: Use VStack(spacing: 0) for consistent banner placement
+            VStack(spacing: 0) {
                 
                 // --- Hidden NavigationLink for Result Transition ---
                 NavigationLink(
@@ -139,7 +140,21 @@ struct InventoryView: View {
                                 onSave: saveRecipeAction // Pass the save action
                             )
                         } else {
-                            Text("No meal data available.")
+                            // 💡 Added loading view for consistency with PlannerView
+                            VStack(spacing: 15) {
+                                ProgressView()
+                                    .scaleEffect(1.5, anchor: .center)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: primaryColor))
+                                    
+                                Text("Searching for recipes based on your pantry...")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                                    
+                                Text("Pantry: \(manager.inventory.count) ingredients | Diet: \(settings.selectedDiet.capitalized)")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     },
                     isActive: $showResults,
@@ -147,155 +162,161 @@ struct InventoryView: View {
                 )
                 .hidden()
                 
-                // MARK: - Header
-                VStack(spacing: 8) {
-                    Text("Pantry Inventory")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundColor(primaryColor)
-                        .padding(.top, 20)
-                    
-                    Text("Track what you have on hand to find the perfect recipe.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.bottom, 10)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 10)
+                // ⭐️ MARK: - HEADER (REPLACED WITH BANNERVIEW)
+                BannerView(
+                    title: "Inventory",
+                    subtitle: "Track what you have to find the perfect recipe."
+                )
                 
-                // MARK: - Conditional Add Ingredient Card
-                
-                if isAddingNewIngredient {
-                    VStack(alignment: .leading, spacing: 15) {
+                // 💡 KEY CHANGE: Wrap the rest of the content in a ScrollView
+                ScrollView {
+                    VStack(spacing: 20) {
                         
-                        // Header and Collapse Button
-                        HStack {
-                            Text("ADD NEW INGREDIENT:")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundColor(.gray)
-                            Spacer()
-                            // Collapse Button
-                            Button(action: { isAddingNewIngredient.toggle() }) {
-                                Image(systemName: "chevron.up.circle.fill")
-                                    .foregroundColor(primaryColor)
-                            }
-                        }
-                        
-                        // Input Fields
-                        Group {
-                            TextField("Name (e.g., Chicken Breast)", text: $newIngredientName)
-                                .padding(.vertical, 8)
-                            
-                            HStack {
-                                TextField("Quantity (e.g., 2)", text: $newIngredientQuantity)
-                                    .keyboardType(.decimalPad)
+                        // MARK: - Conditional Add Ingredient Card
+                        if isAddingNewIngredient {
+                            VStack(alignment: .leading, spacing: 15) {
                                 
-                                TextField("Unit (e.g., lbs, cups, unit)", text: $newIngredientUnit)
+                                // Header and Collapse Button
+                                HStack {
+                                    Text("ADD NEW INGREDIENT:")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.gray)
+                                    Spacer()
+                                    // Collapse Button
+                                    Button(action: { isAddingNewIngredient.toggle() }) {
+                                        Image(systemName: "chevron.up.circle.fill")
+                                            .foregroundColor(primaryColor)
+                                    }
+                                }
+                                
+                                // Input Fields
+                                Group {
+                                    TextField("Name (e.g., Chicken Breast)", text: $newIngredientName)
+                                        .padding(.vertical, 8)
+                                    
+                                    HStack {
+                                        TextField("Quantity (e.g., 2)", text: $newIngredientQuantity)
+                                            .keyboardType(.decimalPad)
+                                        
+                                        TextField("Unit (e.g., lbs, cups, unit)", text: $newIngredientUnit)
+                                    }
+                                }
+                                .padding(8)
+                                .background(Color.white)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                )
+                                
+                                // Add Button (The action button)
+                                Button(action: addIngredient) {
+                                    Text("Add to Inventory")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(primaryColor.opacity(newIngredientName.isEmpty ? 0.5 : 0.9))
+                                        .cornerRadius(12)
+                                        .shadow(radius: 5)
+                                }
+                                .disabled(newIngredientName.isEmpty)
+                                
                             }
-                        }
-                        .padding(8)
-                        .background(Color.white)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                        
-                        // Add Button (The action button)
-                        Button(action: addIngredient) {
-                            Text("Add to Inventory")
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(15)
+                            .shadow(radius: 3)
+                        } else {
+                            // If the state is false, show a simple button to expand the card
+                            Button(action: { isAddingNewIngredient.toggle() }) {
+                                HStack {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("Add New Ingredient to Pantry")
+                                    Spacer()
+                                }
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(primaryColor.opacity(newIngredientName.isEmpty ? 0.5 : 0.9))
+                                .background(primaryColor.opacity(0.9))
                                 .cornerRadius(12)
                                 .shadow(radius: 5)
+                            }
                         }
-                        .disabled(newIngredientName.isEmpty)
+                        
+                        // MARK: - Current Inventory List Card (Bigger and Searchable)
+                        VStack(alignment: .leading) {
+                            Text("YOUR CURRENT INVENTORY (\(filteredInventory.count))") // Updated count
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5)
+                            
+                            // 🔑 SEARCH FIELD
+                            TextField("Search your inventory...", text: $searchText)
+                                .padding(8)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(8)
+                                .padding(.horizontal, 5)
+                                .padding(.bottom, 5)
+                            
+                            // The List needs an explicit height/frame inside a ScrollView,
+                            // or use the whole ScrollView for the list content.
+                            // To maintain the card look, we'll give the list a max frame.
+                            // The original code used List inside VStack without a height, which is problematic.
+                            // For a list inside a scrollable VStack, use a fixed or maximized frame.
+                            List {
+                                // 🔑 LIST USES FILTERED INVENTORY
+                                ForEach(filteredInventory) { item in
+                                    HStack {
+                                        Text(item.name.capitalized)
+                                            .fontWeight(.medium)
+                                        Spacer()
+                                        Text("\(item.quantity, specifier: "%.1f") \(item.unit)")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    // 🔑 ADD SWIPE ACTIONS FOR EDIT AND DELETE
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        // 1. Delete Action
+                                        Button(role: .destructive) {
+                                            // Call the custom delete function which handles the filtered list
+                                            if let index = filteredInventory.firstIndex(where: { $0.id == item.id }) {
+                                                deleteIngredients(offsets: IndexSet(integer: index))
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        
+                                        // 2. Edit Action
+                                        Button {
+                                            // Set the ingredient to edit to present the sheet
+                                            ingredientToEdit = item
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        .tint(.blue)
+                                    }
+                                }
+                                // Deletion must use the indices of the filtered list, then remove from the original manager list
+                                // The .onDelete is still useful for Edit Mode
+                                .onDelete(perform: deleteIngredients)
+                            }
+                            .listStyle(.insetGrouped)
+                            // 💡 KEY CHANGE: Explicitly set a frame for the List inside a ScrollView
+                            .frame(height: max(200, CGFloat(filteredInventory.count) * 50))
+                            
+                        }
                         
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(15)
-                    .shadow(radius: 3)
-                    .padding(.horizontal)
-                } else {
-                    // If the state is false, show a simple button to expand the card
-                    Button(action: { isAddingNewIngredient.toggle() }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add New Ingredient to Pantry")
-                            Spacer()
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(primaryColor.opacity(0.9))
-                        .cornerRadius(12)
-                        .shadow(radius: 5)
-                    }
-                    .padding(.horizontal)
-                }
-                
-                // MARK: - Current Inventory List Card (Bigger and Searchable)
-                VStack(alignment: .leading) {
-                    Text("YOUR CURRENT INVENTORY (\(filteredInventory.count))") // Updated count
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(.gray)
-                        .padding(.leading, 5)
+                    .padding(.horizontal) // Apply horizontal padding to the scrollable content
+                    .padding(.top, 20) // Add top padding to separate from banner
                     
-                    // 🔑 SEARCH FIELD
-                    TextField("Search your inventory...", text: $searchText)
-                        .padding(8)
-                        .background(Color(.systemGray5))
-                        .cornerRadius(8)
-                        .padding(.horizontal, 5)
-                        .padding(.bottom, 5)
-                    
-                    List {
-                        // 🔑 LIST USES FILTERED INVENTORY
-                        ForEach(filteredInventory) { item in
-                            HStack {
-                                Text(item.name.capitalized)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text("\(item.quantity, specifier: "%.1f") \(item.unit)")
-                                    .foregroundColor(.secondary)
-                            }
-                            // 🔑 ADD SWIPE ACTIONS FOR EDIT AND DELETE
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                // 1. Delete Action
-                                Button(role: .destructive) {
-                                    // Call the custom delete function which handles the filtered list
-                                    if let index = filteredInventory.firstIndex(where: { $0.id == item.id }) {
-                                        deleteIngredients(offsets: IndexSet(integer: index))
-                                    }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                
-                                // 2. Edit Action
-                                Button {
-                                    // Set the ingredient to edit to present the sheet
-                                    ingredientToEdit = item
-                                } label: {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                                .tint(.blue)
-                            }
-                        }
-                        // Deletion must use the indices of the filtered list, then remove from the original manager list
-                        // The .onDelete is still useful for Edit Mode
-                        .onDelete(perform: deleteIngredients)
-                    }
-                    .listStyle(.insetGrouped)
-                }
-                .padding(.horizontal)
+                } // End ScrollView
                 
-                // MARK: - Action Button (Triggers Search)
+                // MARK: - Action Button (Triggers Search - Now FIXED at the bottom)
+                // 💡 KEY CHANGE: Moved the button outside the ScrollView
                 if !manager.inventory.isEmpty {
                     
                     Button(action: performRecipeSearch) {
@@ -312,17 +333,18 @@ struct InventoryView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.orange.opacity(0.9))
+                                .background(primaryColor)
                                 .cornerRadius(12)
                                 .shadow(radius: 5)
                         }
                     }
                     .padding(.horizontal)
-                    .padding(.bottom, 10)
+                    .padding(.bottom)
                     .disabled(networkManager.isFetching)
                 }
                 
             }
+            // ⭐️ IMPORTANT: This is crucial for the banner to show up at the top without extra padding
             .navigationTitle("")
             .navigationBarHidden(true)
         }

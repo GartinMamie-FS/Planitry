@@ -34,142 +34,150 @@ struct GroceryListView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
+            // Use ZStack to layer the content and the Floating Action Button
+            ZStack(alignment: .bottomTrailing) {
                 
-                // 1. Custom Header
-                VStack(spacing: 5) {
-                    Text("Your Shopping List")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundColor(primaryColor)
-                        .padding(.top, 20)
+                // Content Layer (The original VStack)
+                // Set spacing to 0 for banner integration
+                VStack(spacing: 0) {
                     
-                    Text("Ingredients needed for your generated meals.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.bottom, 10)
-                }
-                .padding(.horizontal)
-                
-                // 2. Add Item Section
-                HStack {
-                    TextField("Add new item...", text: $newItemName)
-                        .padding(10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        .submitLabel(.done)
-                    
-                    Button {
-                        if !newItemName.isEmpty {
-                            listManager.addItem(ingredientName: newItemName)
-                            newItemName = ""
-                        }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title)
-                            .foregroundColor(primaryColor)
-                    }
-                    .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 10)
-                
-                // 3. Content Area
-                if listManager.groceryList.isEmpty {
-                    ContentUnavailableView(
-                        "Your Grocery List is Empty",
-                        systemImage: "cart.fill",
-                        description: Text("Add ingredients to start your persistent list.")
+                    // 1. Custom Header REPLACED WITH BANNER
+                    BannerView(
+                        title: "Shopping List",
+                        subtitle: "Plan meals and check off items" // Contextual subtitle
                     )
-                    .foregroundColor(primaryColor)
-                } else {
-                    List {
-                        // Section 1: Remaining Items (Collapsible)
-                        if !remainingItems.isEmpty {
-                            Section {
-                                // Only show content if expanded
-                                if isRemainingExpanded {
-                                    ForEach(remainingItems) { item in
-                                        ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
-                                    }
-                                    .onDelete(perform: deleteRemainingItems)
-                                }
-                            } header: {
-                                // Custom tappable header to toggle the state
-                                HStack {
-                                    Text("Remaining (\(remainingItems.count))")
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.gray)
-                                    Spacer()
-                                    Image(systemName: isRemainingExpanded ? "chevron.up" : "chevron.down")
-                                        .foregroundColor(.secondary)
-                                }
-                                .contentShape(Rectangle()) // Makes the entire HStack tappable
-                                .onTapGesture {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        isRemainingExpanded.toggle()
-                                    }
-                                }
-                            }
-                            .headerProminence(.increased)
-                        }
+                    
+                    // Wrap all the original content in a VStack with padding to create spacing below the banner
+                    VStack(spacing: 5) {
                         
-                        // Section 2: Checked Items (Collapsible)
-                        if !checkedItems.isEmpty {
-                            Section {
-                                // Only show content if expanded
-                                if isCheckedExpanded {
-                                    ForEach(checkedItems) { item in
-                                        ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                        // 2. Add Item Section
+                        HStack {
+                            TextField("Add new item...", text: $newItemName)
+                                .padding(10)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                                .submitLabel(.done)
+                            
+                            Button {
+                                if !newItemName.isEmpty {
+                                    listManager.addItem(ingredientName: newItemName)
+                                    newItemName = ""
+                                }
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title)
+                                    .foregroundColor(primaryColor)
+                            }
+                            .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10) // Add padding to separate from the banner
+                        .padding(.bottom, 10)
+                        
+                        // 3. Content Area
+                        if listManager.groceryList.isEmpty {
+                            ContentUnavailableView(
+                                "Your Grocery List is Empty",
+                                systemImage: "cart.fill",
+                                description: Text("Add ingredients to start your persistent list.")
+                            )
+                            .foregroundColor(primaryColor)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity) // Make ContentUnavailableView fill space
+                        } else {
+                            List {
+                                // Section 1: Remaining Items (Collapsible)
+                                if !remainingItems.isEmpty {
+                                    Section {
+                                        // Only show content if expanded
+                                        if isRemainingExpanded {
+                                            ForEach(remainingItems) { item in
+                                                ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                                            }
+                                            .onDelete(perform: deleteRemainingItems)
+                                        }
+                                    } header: {
+                                        // Custom tappable header to toggle the state
+                                        HStack {
+                                            Text("Remaining (\(remainingItems.count))")
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.gray)
+                                            Spacer()
+                                            Image(systemName: isRemainingExpanded ? "chevron.up" : "chevron.down")
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .contentShape(Rectangle()) // Makes the entire HStack tappable
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                isRemainingExpanded.toggle()
+                                            }
+                                        }
                                     }
-                                    // Allow deletion of checked items
-                                    .onDelete(perform: deleteCheckedItems)
+                                    .headerProminence(.increased)
                                 }
-                            } header: {
-                                // Custom tappable header to toggle the state
-                                HStack {
-                                    Text("Checked (\(checkedItems.count))")
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.gray)
-                                    Spacer()
-                                    Image(systemName: isCheckedExpanded ? "chevron.up" : "chevron.down")
-                                        .foregroundColor(.secondary)
-                                }
-                                .contentShape(Rectangle()) // Makes the entire HStack tappable
-                                .onTapGesture {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        isCheckedExpanded.toggle()
+                                
+                                // Section 2: Checked Items (Collapsible)
+                                if !checkedItems.isEmpty {
+                                    Section {
+                                        // Only show content if expanded
+                                        if isCheckedExpanded {
+                                            ForEach(checkedItems) { item in
+                                                ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
+                                            }
+                                            // Allow deletion of checked items
+                                            .onDelete(perform: deleteCheckedItems)
+                                        }
+                                    } header: {
+                                        // Custom tappable header to toggle the state
+                                        HStack {
+                                            Text("Checked (\(checkedItems.count))")
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.gray)
+                                            Spacer()
+                                            Image(systemName: isCheckedExpanded ? "chevron.up" : "chevron.down")
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .contentShape(Rectangle()) // Makes the entire HStack tappable
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                isCheckedExpanded.toggle()
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            .listStyle(.insetGrouped)
+                            .scrollContentBackground(.hidden)
                         }
+                    } // End Content VStack
+                } // End Main VStack
+                
+                // 🔑 FLOATING ACTION BUTTON (FAB) for Clear All
+                if !listManager.groceryList.isEmpty {
+                    Button(action: {
+                        // 🔑 Trigger alert
+                        showingClearAllAlert = true
+                    }) {
+                        Image(systemName: "trash.fill") // A clear icon for deletion
+                            .font(.title)
+                            .padding(15)
+                            .background(primaryColor) // Use the primary color for prominence
+                            .foregroundColor(.white)
+                            .clipShape(Circle())
+                            .shadow(radius: 10, x: 5, y: 5) // Add a shadow for a floating effect
                     }
-                    .listStyle(.insetGrouped)
-                    .scrollContentBackground(.hidden)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 20)
                 }
-            }
+            } // End ZStack
             
             // 4. Navigation Title/Bar Updates
+            // Remove all toolbar items as requested (EditButton removed, Clear All is now FAB)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Clear All", role: .destructive) {
-                        // 🔑 Trigger alert instead of clearing immediately
-                        showingClearAllAlert = true
-                    }
-                    .disabled(listManager.groceryList.isEmpty)
-                    .foregroundColor(primaryColor)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                        .foregroundColor(primaryColor)
-                }
-            }
-            // 🔑 ALERT MODIFIER
+            // 🔑 ALERT MODIFIER remains attached to the NavigationView
             .alert("Confirm Clear List", isPresented: $showingClearAllAlert) {
                 Button("Clear List", role: .destructive) {
                     listManager.clearList()

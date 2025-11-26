@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-
 struct PreferencesView: View {
     // Access the shared settings object
     @EnvironmentObject var settings: UserSettings
@@ -18,40 +17,52 @@ struct PreferencesView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                // MARK: - Section 1: Dietary Label
-                Section(header: Text("Dietary Preference (Required)")) {
-                    Picker("Select Diet", selection: $selectedDietOption) {
-                        ForEach(MealConstraints.DietOption.allCases) { dietOption in
-                            Text(dietOption.rawValue)
-                                .tag(dietOption)
+            // 🔑 1. Wrap Form in VStack and remove navigation title from modifier chain
+            VStack(spacing: 0) {
+                
+                // 🔑 2. Banner View
+                BannerView(
+                    title: "Preferences",
+                    subtitle: "Customize your meal generation settings"
+                )
+                
+                // 3. Move Form content here
+                Form {
+                    // MARK: - Section 1: Dietary Label
+                    Section(header: Text("Dietary Preference (Required)")) {
+                        Picker("Select Diet", selection: $selectedDietOption) {
+                            ForEach(MealConstraints.DietOption.allCases) { dietOption in
+                                Text(dietOption.rawValue)
+                                    .tag(dietOption)
+                            }
+                        }
+                    }
+                    
+                    // MARK: - Section 2: Calorie Budget
+                    Section(header: Text("Maximum Calories Daily (Required)")) {
+                        Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
+                            HStack {
+                                Text("Max Calories:")
+                                Spacer()
+                                Text("\(settings.maxCalories) kcal")
+                                    .foregroundColor(.red)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                    }
+                    
+                    // MARK: - Section 3: Health Constraints
+                    Section(header: Text("Health Constraints (Optional)")) {
+                        ForEach(HealthConstraint.allCases) { constraint in
+                            Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
                         }
                     }
                 }
-                
-                // MARK: - Section 2: Calorie Budget
-                Section(header: Text("Maximum Calories Daily (Required)")) {
-                    Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
-                        HStack {
-                            Text("Max Calories:")
-                            Spacer()
-                            Text("\(settings.maxCalories) kcal")
-                                .foregroundColor(.red)
-                                .fontWeight(.medium)
-                        }
-                    }
-                }
-                
-                // MARK: - Section 3: Health Constraints
-                Section(header: Text("Health Constraints (Optional)")) {
-                    ForEach(HealthConstraint.allCases) { constraint in
-                        Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
-                    }
-                }
-            }
-            .navigationTitle("Meal Preferences")
+                // 🔑 4. Remove .navigationTitle("Meal Preferences") from Form's modifier chain
+            } // End VStack
+            .navigationTitle("") // Clear navigation title bar
+            .navigationBarTitleDisplayMode(.inline)
             
-   
             .onAppear {
                 // 1. Load constraints from settings string into local Set
                 let currentConstraints = settings.activeHealthConstraintsString.split(separator: ",").map { String($0) }
