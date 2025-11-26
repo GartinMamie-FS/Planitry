@@ -11,7 +11,7 @@ struct BannerView: View {
     let subtitle: String? // Optional subtitle for flavor text
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1) // Your app's primary red
     
-    // 🔑 New desired height
+    // New desired height
     let bannerHeight: CGFloat = 120
 
     var body: some View {
@@ -20,23 +20,25 @@ struct BannerView: View {
             Image("splash")
                 .resizable()
                 .aspectRatio(contentMode: .fill) // Fill the banner area
-                // 🔑 Updated frame height
-                .frame(height: bannerHeight)
+                .frame(height: bannerHeight) // Updated frame height
                 .clipped() // Crop the image to the frame
 
             // 2. Semi-transparent Overlay for better text legibility
             Rectangle()
                 .fill(Color.black.opacity(0.4))
-                // 🔑 Updated frame height
-                .frame(height: bannerHeight)
+                .frame(height: bannerHeight) // Updated frame height
 
             // 3. Foreground Content (Title and Subtitle)
             VStack {
-                // 🔑 Removed the App Logo (Image(systemName: "fork.knife.circle.fill"))
-                
+                // 🔑 CHANGED: Foreground color is now .white
+                Image(systemName: "fork.knife.circle.fill")
+                    .font(.system(size: 30))
+                    .foregroundColor(.white) // <-- This is the key change
+                    .shadow(radius: 2)
+                    .padding(.bottom, 2)
+
                 // Main App Title
                 Text(title)
-                    // Adjusted font size slightly since the banner is smaller
                     .font(.system(size: 26, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                     .shadow(radius: 3)
