@@ -7,7 +7,6 @@
 import SwiftUI
 import Combine
 
-
 struct GroceryListView: View {
     
     @EnvironmentObject var listManager: GroceryListManager
@@ -47,32 +46,48 @@ struct GroceryListView: View {
                         subtitle: "Plan meals and check off items" // Contextual subtitle
                     )
                     
-                    // Wrap all the original content in a VStack with padding to create spacing below the banner
+                    
                     VStack(spacing: 5) {
                         
                         // 2. Add Item Section
-                        HStack {
-                            TextField("Add new item...", text: $newItemName)
-                                .padding(10)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
-                                .submitLabel(.done)
-                            
-                            Button {
-                                if !newItemName.isEmpty {
-                                    listManager.addItem(ingredientName: newItemName)
-                                    newItemName = ""
+                      
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("ADD NEW GROCERY ITEM:")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5) // Align with input field
+
+                            HStack {
+                                TextField("Add new item...", text: $newItemName)
+                                    .padding(5)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                                    .submitLabel(.done)
+                                
+                                Button {
+                                    if !newItemName.isEmpty {
+                                        listManager.addItem(ingredientName: newItemName)
+                                        newItemName = ""
+                                    }
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title)
+                                        .foregroundColor(primaryColor)
                                 }
-                            } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title)
-                                    .foregroundColor(primaryColor)
+                                .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
                             }
-                            .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 5) // Apply horizontal padding to the backgrounded block
+                            
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 10) // Add padding to separate from the banner
+                        
+                        .padding(.top, 20)
                         .padding(.bottom, 10)
+                        .padding(.horizontal) // Apply horizontal padding to the overall input block
                         
                         // 3. Content Area
                         if listManager.groceryList.isEmpty {
@@ -172,8 +187,7 @@ struct GroceryListView: View {
                 }
             } // End ZStack
             
-            // 4. Navigation Title/Bar Updates
-            // Remove all toolbar items as requested (EditButton removed, Clear All is now FAB)
+        
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             

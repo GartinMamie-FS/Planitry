@@ -218,7 +218,7 @@ struct ResultsView: View {
                 }
             }
             .edgesIgnoringSafeArea(.top)
-            .navigationTitle("Your Meal Idea")
+            .navigationTitle(meal.label)
             .navigationBarTitleDisplayMode(.inline)
             
             // MARK: - Success Message Overlay

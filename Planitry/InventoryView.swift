@@ -165,55 +165,61 @@ struct InventoryView: View {
                     subtitle: "Track what you have to find the perfect recipe."
                 )
                 
-                // 💡 KEY CHANGE: Wrap the rest of the content in a ScrollView
+                // ✅ KEY CHANGE: Move Add Ingredient Input HERE (outside the ScrollView)
+                VStack(alignment: .leading, spacing: 10) {
+                    
+                    // ✅ MARK: - GROCERY LIST STYLE INPUT FIELD
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("ADD NEW INGREDIENT:")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.gray)
+                            .padding(.leading, 5)
+
+                        // 🔑 MAIN INPUT ROW (Mimicking Grocery List)
+                        HStack {
+                            // Combined Text Field
+                            TextField(
+                                "Name (e.g., 2 lbs Chicken Breast)", // Example hint for multiple fields
+                                text: $newIngredientName
+                            )
+                            
+                            // Condensed Quantity Field
+                            TextField("Qty", text: $newIngredientQuantity)
+                                .keyboardType(.decimalPad)
+                                .frame(width: 50)
+                                .multilineTextAlignment(.trailing)
+
+                            // Condensed Unit Field
+                            TextField("Unit", text: $newIngredientUnit)
+                                .frame(width: 50)
+                                .multilineTextAlignment(.trailing)
+
+                            // Add Button
+                            Button {
+                                addIngredient()
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title)
+                                    .foregroundColor(primaryColor)
+                            }
+                            .disabled(newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .padding(.trailing, 5) // Keep the trailing padding for the button
+                        }
+                        .padding(10)                         .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 5)
+                        
+                    }
+                    
+                }
+                .padding(.horizontal) // Apply horizontal padding to the overall input block
+                .padding(.top, 20) // Add top padding to separate from banner
+                .padding(.bottom, 10)
+                
+                // 💡 Wrap the rest of the content (Inventory List) in a ScrollView
                 ScrollView {
                     VStack(spacing: 20) {
-                        
-                        // ✅ MARK: - GROCERY LIST STYLE INPUT FIELD
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("ADD NEW INGREDIENT:")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundColor(.gray)
-                                .padding(.leading, 5)
-
-                            // 🔑 MAIN INPUT ROW (Mimicking Grocery List)
-                            HStack {
-                                // Combined Text Field
-                                TextField(
-                                    "Name (e.g., 2 lbs Chicken Breast)", // Example hint for multiple fields
-                                    text: $newIngredientName
-                                )
-                                .padding(.leading, 10)
-                                
-                                // Condensed Quantity Field
-                                TextField("Qty", text: $newIngredientQuantity)
-                                    .keyboardType(.decimalPad)
-                                    .frame(width: 50)
-                                    .multilineTextAlignment(.trailing)
-                                
-                                // Condensed Unit Field
-                                TextField("Unit", text: $newIngredientUnit)
-                                    .frame(width: 50)
-                                    .multilineTextAlignment(.trailing)
-                                
-                                // Add Button
-                                Button {
-                                    addIngredient()
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title)
-                                        .foregroundColor(primaryColor)
-                                }
-                                .disabled(newIngredientName.trimmingCharacters(in: .whitespaces).isEmpty)
-                                .padding(.trailing, 5)
-                            }
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                            .padding(.horizontal, 5)
-                            
-                        }
                         
                         // MARK: - Current Inventory List Card (Bigger and Searchable)
                         VStack(alignment: .leading) {
@@ -268,16 +274,12 @@ struct InventoryView: View {
                             }
                             .listStyle(.insetGrouped)
                             
-                            // Adjust the height calculation for the List to avoid nesting scroll views, but allow it to grow.
-                            // The outer ScrollView will handle the primary scrolling.
                             .frame(height: max(200, CGFloat(filteredInventory.count) * 50))
                             
                         }
                         
                     }
-                    .padding(.horizontal) // Apply horizontal padding to the scrollable content
-                    .padding(.top, 20) // Add top padding to separate from banner
-                    
+                    .padding(.horizontal)
                 } // End ScrollView
                 
                 // MARK: - Action Button (Triggers Search - Now FIXED at the bottom)
@@ -309,11 +311,11 @@ struct InventoryView: View {
                 }
                 
             }
-            // ⭐️ IMPORTANT: This is crucial for the banner to show up at the top without extra padding
+          
             .navigationTitle("")
             .navigationBarHidden(true)
         }
-        // 🔑 EDIT SHEET: Presents the EditIngredientView when ingredientToEdit is non-nil
+      
         .sheet(item: $ingredientToEdit) { ingredient in
             EditIngredientView(
                 inventoryManager: manager,
