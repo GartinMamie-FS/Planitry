@@ -30,12 +30,6 @@ struct BannerView: View {
 
             // 3. Foreground Content (Title and Subtitle)
             VStack {
-                // 🔑 CHANGED: Foreground color is now .white
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(.white) // <-- This is the key change
-                    .shadow(radius: 2)
-                    .padding(.bottom, 2)
 
                 // Main App Title
                 Text(title)

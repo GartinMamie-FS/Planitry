@@ -24,6 +24,9 @@ class UserSettings: ObservableObject {
     // Health Constraints stored as a comma-separated string
     @AppStorage("activeHealthConstraints") var activeHealthConstraintsString: String = ""
     
+    // 🔑 ADDED PROPERTY: Controls if sound effects are played. Default is true (ON).
+        @AppStorage("areSoundEffectsEnabled") var areSoundEffectsEnabled: Bool = true // <--- NEW PROPERTY
+    
     /// COMPUTED PROPERTY: Safely convert the stored comma-separated string back to an array of strings.
     var activeHealthConstraints: [String] {
         return activeHealthConstraintsString

@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import Combine
+import AVFoundation
 
 struct InventoryView: View {
     @EnvironmentObject var manager: InventoryManager
@@ -27,6 +28,9 @@ struct InventoryView: View {
     
     @State private var recipeConstraints: String = ""
     @State private var selectedDiet: String = ""
+    
+    // 🔑 ADDED STATE: Store the currently playing audio player for control
+        @State private var backgroundPlayer: AVAudioPlayer?
     
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
@@ -88,39 +92,48 @@ struct InventoryView: View {
         print("Recipe Saved: \(mealToSave.label) (\(mealToSave.id))")
     }
     
-    // MARK: - Networking Logic (Moved from RecipeFinderView)
+    // MARK: - Networking Logic
     
     private func performRecipeSearch() {
-        guard !manager.inventory.isEmpty else {
-            self.alertError = NSError(domain: "InventoryError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Your inventory is empty. Please add ingredients before searching."])
-            return
-        }
-        
-        alertError = nil
-        foundMeal = nil
-        showResults = false
-        
-        let ingredientNames = manager.inventory.map { $0.name.lowercased() }
-        
-        Task {
-            let result = await networkManager.fetchRecipeByInventory(
-                ingredients: ingredientNames,
-                maxCalories: Int(settings.maxCalories),
-                selectedDiet: settings.selectedDiet,
-                healthConstraints: settings.activeHealthConstraints
-            )
+            guard !manager.inventory.isEmpty else {
+                self.alertError = NSError(domain: "InventoryError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Your inventory is empty. Please add ingredients before searching."])
+                return
+            }
             
-            await MainActor.run {
-                switch result {
-                case .success(let meal):
-                    self.foundMeal = meal
-                    self.showResults = true // Trigger navigation on success
-                case .failure(let error):
-                    self.alertError = error
+            // 1. Start the chopping sound and store the player instance
+            // NOTE: Ensure AudioPlayerHelper struct is in scope for this to work.
+            backgroundPlayer = AudioPlayerHelper.playSound(named: "chopping", withExtension: "mp3")
+            
+            alertError = nil
+            foundMeal = nil
+            showResults = false
+            
+            let ingredientNames = manager.inventory.map { $0.name.lowercased() }
+            
+            Task {
+                let result = await networkManager.fetchRecipeByInventory(
+                    ingredients: ingredientNames,
+                    maxCalories: Int(settings.maxCalories),
+                    selectedDiet: settings.selectedDiet,
+                    healthConstraints: settings.activeHealthConstraints
+                )
+                
+                await MainActor.run {
+                    
+                    // 2. STOP THE SOUND when the network request completes
+                    backgroundPlayer?.stop()
+                    backgroundPlayer = nil
+                    
+                    switch result {
+                    case .success(let meal):
+                        self.foundMeal = meal
+                        self.showResults = true // Trigger navigation on success
+                    case .failure(let error):
+                        self.alertError = error
+                    }
                 }
             }
         }
-    }
     
     // MARK: - View Body
     var body: some View {

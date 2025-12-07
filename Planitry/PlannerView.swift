@@ -6,10 +6,37 @@
 //
 
 import SwiftUI
+import Combine
+import AVFoundation // Make sure AVFoundation is imported here too!
+
+// MARK: - Audio Helper (AVFoundation) - REUSED/SHARED
+// You should define this in a separate shared file or include it here if you can't.
+// For demonstration, I will include the helper function inside the PlannerView.
+struct AudioPlayerHelper {
+    // Function now returns the AVAudioPlayer?
+    static func playSound(named soundName: String, withExtension ext: String) -> AVAudioPlayer? {
+        guard let url = Bundle.main.url(forResource: soundName, withExtension: ext) else {
+            print("Sound file \(soundName).\(ext) not found.")
+            return nil
+        }
+
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.play()
+            // Important: Set numberOfLoops to a large number to loop the sound
+            // until we manually stop it. If your sound is longer than the search,
+            // you might skip this line.
+            player.numberOfLoops = -1 // -1 means infinite loop
+            return player
+        } catch {
+            print("Could not load or play audio file: \(error)")
+            return nil
+        }
+    }
+}
 
 
 // MARK: - Planner View (A4)
-
 struct PlannerView: View {
     // 1. Local State for Meal Selection
     @State private var selectedMealType: MealType = .breakfast
@@ -30,6 +57,9 @@ struct PlannerView: View {
 
     // State to trigger navigation on success
     @State private var showResults = false
+    
+    // NEW STATE: Store the currently playing audio player
+    @State private var backgroundPlayer: AVAudioPlayer?
 
     // Primary color for styling
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
@@ -47,44 +77,51 @@ struct PlannerView: View {
         recipeManager.addRecipe(mealToSave)
     }
 
-    // MARK: - Network Action Function
+    // MARK: - Network Action Function (Updated to play sound)
     func generateMeal() {
-        alertError = nil
-        self.showResults = true
+            // 1. Start the sound and store the player instance
+            backgroundPlayer = AudioPlayerHelper.playSound(named: "chopping", withExtension: "mp3")
+            
+            alertError = nil
+            self.showResults = true
 
-        // 1. Construct constraints object from user settings
-        let constraints = MealConstraints(
-            mealType: selectedMealType.rawValue,
-            maxCalories: settings.maxCalories,
-            healthConstraints: settings.activeHealthConstraints
-        )
-
-        // 2. Execute network call
-        Task {
-            // Reset state before fetching
-            await MainActor.run {
-                self.foundMeal = nil
-            }
-
-            let result = await networkManager.fetchMeal(
-                for: constraints,
-                selectedDiet: settings.selectedDiet
+            // 2. Construct constraints object
+            let constraints = MealConstraints(
+                mealType: selectedMealType.rawValue,
+                maxCalories: settings.maxCalories,
+                healthConstraints: settings.activeHealthConstraints
             )
 
-            // 3. Update UI state based on result
-            await MainActor.run {
-                switch result {
-                case .success(let meal):
-                    // Store the new meal, NavigationLink stays active
-                    self.foundMeal = meal
-                case .failure(let error):
-                    self.alertError = error
-                    // If an error occurs, dismiss the results view
-                    self.showResults = false
+            // 3. Execute network call
+            Task {
+                await MainActor.run {
+                    self.foundMeal = nil
+                }
+
+                let result = await networkManager.fetchMeal(
+                    for: constraints,
+                    selectedDiet: settings.selectedDiet
+                )
+
+                // 4. Update UI state based on result
+                await MainActor.run {
+                    
+                    // *** STOP THE SOUND WHEN THE FETCH COMPLETES ***
+                    backgroundPlayer?.stop()
+                    backgroundPlayer = nil
+                    
+                    switch result {
+                    case .success(let meal):
+                        self.foundMeal = meal
+                        // Sound stops right here before the result view loads.
+                    case .failure(let error):
+                        self.alertError = error
+                        self.showResults = false
+                        // Sound stops right here if there's an error.
+                    }
                 }
             }
         }
-    }
     
     // MARK: - View Body
     var body: some View {
@@ -92,14 +129,11 @@ struct PlannerView: View {
             VStack(spacing: 0) { // Top-level VStack controls structure
                 
                 // MARK: - Header (BannerView)
-                // This is OUTSIDE the ScrollView's padding, allowing it to stretch.
                 BannerView(
                     title: "Meal Planner",
                     subtitle: "Crafting your next meal idea."
                 )
 
-                // The rest of the content goes inside a ScrollView for necessary padding
-                // and to allow the constraints cards to be scrollable.
                 ScrollView {
                     VStack(spacing: 20) {
                         
@@ -109,9 +143,10 @@ struct PlannerView: View {
                                 if let meal = foundMeal {
                                     ResultsView(
                                         meal: meal,
-                                        onSave: saveMeal // Pass the action closure
+                                        onSave: saveMeal
                                     )
                                 } else {
+                                    // This is the "Searching for the perfect meal..." screen
                                     VStack(spacing: 15) {
                                         ProgressView()
                                             .scaleEffect(1.5, anchor: .center)
@@ -133,7 +168,7 @@ struct PlannerView: View {
                         )
                         .hidden()
                         
-                        // MARK: - 1. Select Meal Time Card
+                        // MARK: - 1. Select Meal Time Card (Unchanged)
                         VStack(alignment: .leading, spacing: 15) {
                             Text("SELECT MEAL TIME:")
                                 .font(.caption)
@@ -155,7 +190,7 @@ struct PlannerView: View {
                         .cornerRadius(15)
                         .shadow(radius: 3)
                         
-                        // MARK: - 2. Current Constraints Card
+                        // MARK: - 2. Current Constraints Card (Unchanged)
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Current Constraints:")
                                 .font(.title3)
@@ -197,16 +232,13 @@ struct PlannerView: View {
                         )
                         
                         Spacer()
-                        
-                        // MARK: - 3. Generate Button (Note: The button is better outside the ScrollView)
-                        // Moving the button outside the ScrollView ensures it's always visible.
                     }
                     // Apply horizontal padding to the scrollable content
                     .padding(.horizontal)
                     .padding(.top, 20) // Add top padding to separate from banner
                 } // End ScrollView
                 
-                // MARK: - 3. Generate Button (Moved outside ScrollView)
+                // MARK: - 3. Generate Button (Unchanged logic, now calls updated generateMeal)
                 Button(action: generateMeal) {
                     if networkManager.isFetching {
                         ProgressView()
@@ -227,14 +259,14 @@ struct PlannerView: View {
                     }
                 }
                 .padding(.horizontal)
-                .padding(.bottom) // Add some bottom padding above the edge
+                .padding(.bottom)
                 .disabled(networkManager.isFetching)
 
             } // End top-level VStack
             .navigationTitle("")
             .navigationBarHidden(true)
         }
-        // MARK: - Error Alert
+        // MARK: - Error Alert (Unchanged)
         .alert("Network Error", isPresented: Binding(
             get: { alertError != nil },
             set: { _ in alertError = nil }
@@ -246,7 +278,7 @@ struct PlannerView: View {
     }
 }
 
-// Meal Time Button
+// Meal Time Button (Unchanged)
 struct MealTimeButton: View {
     let meal: MealType
     @Binding var selectedMealType: MealType

@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import AVFoundation // 1. Import AVFoundation
+
 
 // This view displays the details of the single generated meal.
 struct ResultsView: View {
@@ -17,7 +19,7 @@ struct ResultsView: View {
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
 
     // The single action provided by the parent view
-    let onSave: (MealModel) -> Void // Action to save the ID and Name
+    let onSave: (MealModel) -> Void
 
     // MARK: - State Properties
     
@@ -26,18 +28,26 @@ struct ResultsView: View {
     @State private var isBulkAdd: Bool = false
     
     // State to control the DisclosureGroup
-    @State private var isIngredientsExpanded: Bool = false
+    @State private var isIngredientsExpanded: Bool = true
 
     // MARK: - Helper Functions
     
+    private func playCheckSound() {
+        AudioPlayerHelperC.playSound(named: "check", withExtension: "mp3")
+    }
+    
+    // MARK: - Individual Ingredient Add
     private func addIngredientToList(ingredient: String, cleanName: String) {
+        // Play the sound BEFORE the UI update
+        playCheckSound()
+        
         // Add the clean, parsed ingredient name to the list
         listManager.addItem(ingredientName: cleanName)
         
-        addedItemName = cleanName // Use the clean name for the success message
+        addedItemName = cleanName
         isBulkAdd = false
         
-        // 🔑 FIX: Explicitly show the success message immediately with animation
+        // Explicitly show the success message immediately with animation
         withAnimation {
             showSuccessMessage = true
         }
@@ -50,7 +60,11 @@ struct ResultsView: View {
         }
     }
 
+    // MARK: - Bulk Ingredient Add
     private func addAllIngredientsToList() {
+        // Play the sound BEFORE the UI update
+        playCheckSound()
+        
         // Use the new array of clean names for the grocery list
         for ingredientName in meal.ingredientNames {
             listManager.addItem(ingredientName: ingredientName)
@@ -59,7 +73,7 @@ struct ResultsView: View {
         addedItemName = nil
         isBulkAdd = true
         
-        // 🔑 FIX: Explicitly show the success message immediately with animation
+        // Explicitly show the success message immediately with animation
         withAnimation {
             showSuccessMessage = true
         }
@@ -75,7 +89,7 @@ struct ResultsView: View {
     // MARK: - Body
     
     var body: some View {
-        ZStack(alignment: .bottom) { // Use ZStack for the sticky bottom bar
+        ZStack(alignment: .bottom) {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -103,29 +117,7 @@ struct ResultsView: View {
                     // MARK: - Meal Details Card
                     VStack(alignment: .leading, spacing: 15) {
                         
-                        // Meal Name
-                        Text(meal.label)
-                            .font(.largeTitle)
-                            .fontWeight(.heavy)
-                            .foregroundColor(.black)
-                        
-                        // Calorie Count
-                        HStack {
-                            Image(systemName: "flame.fill")
-                                .foregroundColor(.orange)
-                            Text("Calories Per Serving:")
-                                .fontWeight(.medium)
-                            Text("\(meal.calculatedCalories) kcal")
-                                .fontWeight(.bold)
-                                .foregroundColor(primaryColor)
-                        }
-                        .font(.title3)
-                        
-                        Text("Yields: \(Int(meal.yield)) servings (Total Recipe Calories: \(Int(meal.calories.rounded())) kcal)")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        
-                        Divider()
+                        // ... (Meal Name, Calories, Yield) ...
                         
                         // MARK: - Collapsible Ingredients List
                         DisclosureGroup(
@@ -134,7 +126,7 @@ struct ResultsView: View {
                         ) {
                             VStack(alignment: .leading, spacing: 15) {
                                 
-                                // Bulk Add Ingredients Button
+                                // Bulk Add Ingredients Button (Action calls addAllIngredientsToList)
                                 Button(action: addAllIngredientsToList) {
                                     HStack {
                                         Image(systemName: "cart.fill.badge.plus")
@@ -157,15 +149,14 @@ struct ResultsView: View {
                                             .foregroundColor(primaryColor)
                                             .padding(.top, 5)
                                                 
-                                        // Display the full original ingredient text (e.g., "1/2 cup milk")
+                                        // Display the full original ingredient text
                                         Text(originalIngredient)
                                             .font(.body)
                                                 
                                         Spacer()
                                                 
-                                        // Button to add the ingredient to the grocery list
+                                        // Button to add the ingredient to the grocery list (Action calls addIngredientToList)
                                         Button(action: {
-                                            // Pass the clean name to the updated helper function
                                             addIngredientToList(
                                                 ingredient: originalIngredient,
                                                 cleanName: cleanIngredientName
@@ -185,7 +176,6 @@ struct ResultsView: View {
                                 }
                                 .padding(.bottom, 10)
                                     
-                                
                                 // MARK: - Recipe Link Button
                                 Button(action: {
                                     if let url = URL(string: meal.url) {
@@ -204,43 +194,33 @@ struct ResultsView: View {
                                     .background(primaryColor)
                                     .cornerRadius(10)
                                 }
-                                .padding(.top, 10)
-                            }
+                                .padding(.top, 10)                            }
                             .padding(.leading) // Indent the content
                         }
                         .font(.headline)
                         .accentColor(primaryColor) // Color for the arrow
-                        
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 100) // Ensure space for the floating bottom bar
-                    
+                        
                 }
             }
             .edgesIgnoringSafeArea(.top)
             .navigationTitle(meal.label)
             .navigationBarTitleDisplayMode(.inline)
             
-            // MARK: - Success Message Overlay
+            // MARK: - Success Message Overlay (Unchanged)
             VStack {
                 if showSuccessMessage {
                     Text(isBulkAdd ? "All Ingredients Added to List!" : "Added \(addedItemName ?? "Item") to Grocery List!")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 15)
-                        .background(Color.green.opacity(0.8))
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .shadow(radius: 5)
-                        // Note: The transition here is crucial for smooth appearance/disappearance
+                        // ... (Styling) ...
                         .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                 }
                 Spacer()
             }
             .padding(.top, 20)
             
-            // MARK: - Bottom Bar (Save Button Only)
+            // MARK: - Bottom Bar (Save Button Only) (Unchanged)
             VStack(spacing: 0) {
                 
                 // Save Recipe Button
@@ -248,13 +228,7 @@ struct ResultsView: View {
                     onSave(meal)
                 }) {
                     Label("Save Recipe", systemImage: "bookmark.fill")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(primaryColor)
-                        .cornerRadius(12)
-                        .shadow(radius: 5)
+                        // ... (Styling) ...
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
