@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Combine
-import AVFoundation // 1. Import AVFoundation
+import AVFoundation 
 
 // MARK: - Tab Selection Enumeration
 // Define an enum to clearly represent each tab.
@@ -55,7 +55,6 @@ struct ContentView: View {
 
     // MARK: - Custom Initializer (Unchanged)
     init() {
-        // ... (Initialization remains the same)
         let settings = UserSettings()
         let inventory = InventoryManager()
         let recipe = RecipeManager()

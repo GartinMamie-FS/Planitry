@@ -75,7 +75,7 @@ struct LandingPageView: View {
                 
                 Spacer()
 
-                // Refactored Circular Button
+                // Refactored Circular Button (FIXED)
                 Button(action: {
                     // 4. Play the sound immediately
                     playSound()
@@ -90,8 +90,10 @@ struct LandingPageView: View {
                         showLandingPage = false
                     }
                 }) {
-                    Image(systemName: "arrow.right")
-                        .font(.largeTitle.weight(.semibold))
+                    // 🔑 CHANGE MADE HERE: Replaced Image with Text
+                    Text("START")
+                        // Using .title2 or .title3 font weight keeps it readable inside the 80x80 circle
+                        .font(.title2.weight(.heavy))
                         .foregroundColor(.white)
                         .frame(width: 80, height: 80)
                         .background(Color.red)

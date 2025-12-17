@@ -46,6 +46,6 @@ class UserSettings: ObservableObject {
         self.selectedDiet = "balanced"
         self.maxCalories = 2000
         self.activeHealthConstraintsString = ""
-        self.hasCompletedOnboarding = true // Mark onboarding as complete upon setting defaults
+        self.hasCompletedOnboarding = true
     }
 }

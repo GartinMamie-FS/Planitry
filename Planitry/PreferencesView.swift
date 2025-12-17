@@ -15,20 +15,28 @@ struct PreferencesView: View {
     
     @State private var selectedDietOption: MealConstraints.DietOption = .balanced
     
+    // Helper for simple success haptics (for Toggles)
+    private func generateToggleHaptic() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+
+    // Helper for soft impact haptics (for Steppers)
+    private func generateStepperHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+    }
+    
     var body: some View {
         NavigationView {
-            // 🔑 1. Wrap Form in VStack and remove navigation title from modifier chain
             VStack(spacing: 0) {
                 
                 // 🔑 2. Banner View
-                BannerView(
-                    title: "Preferences",
-                    subtitle: "Customize your meal generation settings"
-                )
+                BannerView(title: "Preferences", subtitle: "Customize your meal generation settings")
                 
-                // 3. Move Form content here
+                // 3. Form content
                 Form {
-                    // MARK: - Section 1: Dietary Label
+                    // MARK: - Section 1: Dietary Label (Picker doesn't usually use haptics)
                     Section {
                         Picker("Select Diet", selection: $selectedDietOption) {
                             ForEach(MealConstraints.DietOption.allCases) { dietOption in
@@ -37,14 +45,10 @@ struct PreferencesView: View {
                             }
                         }
                     } header: {
-                        // ⭐️ APPLY CONSISTENT STYLING HERE
-                        Text("DIETARY PREFERENCE (REQUIRED)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.gray)
+                        Text("DIETARY PREFERENCE (REQUIRED)").font(.caption).fontWeight(.bold).foregroundColor(.gray)
                     }
                     
-                    // MARK: - Section 2: Calorie Budget
+                    // MARK: - Section 2: Calorie Budget (Stepper)
                     Section {
                         Stepper(value: $settings.maxCalories, in: 100...5000, step: 100) {
                             HStack {
@@ -55,32 +59,32 @@ struct PreferencesView: View {
                                     .fontWeight(.medium)
                             }
                         }
+                        // 🔑 ADDED: HAPTICS to Stepper
+                        .onChange(of: settings.maxCalories) { _ in
+                            generateStepperHaptic()
+                        }
                     } header: {
-                        // ⭐️ APPLY CONSISTENT STYLING HERE
-                        Text("MAXIMUM CALORIES DAILY (REQUIRED)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.gray)
+                        Text("MAXIMUM CALORIES DAILY (REQUIRED)").font(.caption).fontWeight(.bold).foregroundColor(.gray)
                     }
                     
-                    // MARK: - Section 3: Health Constraints
+                    // MARK: - Section 3: Health Constraints (Toggles)
                     Section {
                         ForEach(HealthConstraint.allCases) { constraint in
                             Toggle(constraint.rawValue, isOn: binding(for: constraint.rawValue))
+                                // 🔑 ADDED: HAPTICS to Toggle
+                                .onChange(of: activeConstraints.contains(constraint.rawValue)) { _ in
+                                    generateToggleHaptic()
+                                }
                         }
                     } header: {
-                        // ⭐️ APPLY CONSISTENT STYLING HERE
-                        Text("HEALTH CONSTRAINTS (OPTIONAL)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.gray)
+                        Text("HEALTH CONSTRAINTS (OPTIONAL)").font(.caption).fontWeight(.bold).foregroundColor(.gray)
                     }
                 }
-                // 🔑 4. Remove .navigationTitle("Meal Preferences") from Form's modifier chain
             } // End VStack
-            .navigationTitle("") // Clear navigation title bar
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             
+            // Sync local state when view appears
             .onAppear {
                 // 1. Load constraints from settings string into local Set
                 let currentConstraints = settings.activeHealthConstraintsString.split(separator: ",").map { String($0) }
