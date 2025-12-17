@@ -67,3 +67,10 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+firebase.json
+.firebaserc
+functions/
+node_modules/
+package.json
+package-lock.json
+index.js
