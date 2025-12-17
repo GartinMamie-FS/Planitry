@@ -60,7 +60,6 @@ class InventoryManager: ObservableObject {
     
     /// Adds a new ingredient and saves the changes.
     func addIngredient(name: String, quantity: Double, unit: String) {
-        // Assuming Ingredient is defined elsewhere with Codable and Identifiable conformance
         let newIngredient = Ingredient(
             name: name.trimmingCharacters(in: .whitespaces),
             quantity: quantity,
@@ -73,7 +72,6 @@ class InventoryManager: ObservableObject {
         saveInventory()
     }
     
-    /// 🔑 NEW FUNCTION: Updates an existing ingredient by its ID and saves the changes.
     func updateIngredient(id: UUID, newName: String, newQuantity: Double, newUnit: String) {
         if let index = inventory.firstIndex(where: { $0.id == id }) {
             // Update the properties
@@ -88,7 +86,6 @@ class InventoryManager: ObservableObject {
         }
     }
     
-    /// 🔑 NEW FUNCTION: Removes ingredients based on a list of IDs and saves the changes.
     func removeIngredients(with ids: [UUID]) {
         // Filter out any ingredients whose IDs are in the provided list
         inventory.removeAll { ids.contains($0.id) }
@@ -97,13 +94,9 @@ class InventoryManager: ObservableObject {
         saveInventory()
     }
     
-    // The original `deleteIngredients(offsets: IndexSet)` is no longer necessary
-    // if the view calls `removeIngredients(with:)`.
     
     // MARK: - Item Transfer Logic
     
-    /// Converts a purchased GroceryListItem into an Ingredient and adds it to the inventory.
-    /// Purchased items use placeholder quantity/unit since GroceryListItem lacks that detail.
     func receivePurchasedItem(item: GroceryListItem) {
         let normalizedName = item.name.lowercased().trimmingCharacters(in: .whitespaces)
         
@@ -114,7 +107,6 @@ class InventoryManager: ObservableObject {
         }
         
         // Use a placeholder quantity and unit (1.0 "unit")
-        // Assuming Ingredient is defined elsewhere
         let newIngredient = Ingredient(
             name: item.name,
             quantity: 1.0,

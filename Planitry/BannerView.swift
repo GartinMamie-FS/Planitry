@@ -8,7 +8,7 @@ import SwiftUI
 
 struct BannerView: View {
     let title: String
-    let subtitle: String? // Optional subtitle for flavor text
+    let subtitle: String?
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1) // Your app's primary red
     
     // New desired height
@@ -21,12 +21,12 @@ struct BannerView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill) // Fill the banner area
                 .frame(height: bannerHeight) // Updated frame height
-                .clipped() // Crop the image to the frame
+                .clipped()
 
             // 2. Semi-transparent Overlay for better text legibility
             Rectangle()
                 .fill(Color.black.opacity(0.4))
-                .frame(height: bannerHeight) // Updated frame height
+                .frame(height: bannerHeight)
 
             // 3. Foreground Content (Title and Subtitle)
             VStack {
@@ -46,6 +46,6 @@ struct BannerView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity) // Ensure the banner stretches across the screen
+        .frame(maxWidth: .infinity) 
     }
 }

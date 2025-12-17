@@ -112,7 +112,6 @@ class GroceryListManager: ObservableObject {
             // Toggle the checked state
             groceryList[index].isChecked.toggle()
             
-            // CRITICAL CHANGE: If the item is NOW checked (true), transfer it to inventory
             if groceryList[index].isChecked {
                 inventoryTransferHandler?(groceryList[index])
             }

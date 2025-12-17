@@ -90,7 +90,6 @@ struct LandingPageView: View {
                         showLandingPage = false
                     }
                 }) {
-                    // 🔑 CHANGE MADE HERE: Replaced Image with Text
                     Text("START")
                         // Using .title2 or .title3 font weight keeps it readable inside the 80x80 circle
                         .font(.title2.weight(.heavy))

@@ -73,19 +73,19 @@ struct ContentView: View {
     var body: some View {
         
         ZStack {
-            // Conditional View Rendering: Show LandingPageView OR TabView
+            // Conditional View Rendering
             if showLandingPage {
                 LandingPageView(showLandingPage: $showLandingPage)
             } else {
                 // Main TabView
-                TabView(selection: $selectedTab) { // 3. Bind the TabView to the selection state
+                TabView(selection: $selectedTab) {
                     
                     // Tab 1: Planner
                     PlannerView()
                         .tabItem {
                             Label("Planner", systemImage: "fork.knife")
                         }
-                        .tag(TabSelection.planner) // Assign a tag corresponding to the enum
+                        .tag(TabSelection.planner) 
 
                     // Tab 2: Inventory
                     InventoryView()
@@ -123,7 +123,10 @@ struct ContentView: View {
                     AudioPlayerHelperC.playSound(named: "swosh", withExtension: "mp3")
                 }
                 
-                .fullScreenCover(isPresented: .constant(!settings.hasCompletedOnboarding)) {
+                .fullScreenCover(isPresented: Binding(
+                    get: { !settings.hasCompletedOnboarding },
+                    set: { _ in } // We handle the actual dismissal inside OnboardingFlowView
+                )) {
                     OnboardingFlowView()
                         .environmentObject(settings)
                 }

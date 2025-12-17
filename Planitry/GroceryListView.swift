@@ -25,14 +25,14 @@ struct GroceryListView: View {
     @EnvironmentObject var listManager: GroceryListManager
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
-    // Computed properties (FIXED)
+    // Computed properties
     var remainingItems: [GroceryListItem] {
-        // CORRECT: Filter for unchecked items
+        // Filter for unchecked items
         listManager.groceryList.filter { !$0.isChecked }
     }
     
     var checkedItems: [GroceryListItem] {
-        // CORRECT: Filter for checked items (The bug fix)
+        // Filter for checked items (The bug fix)
         listManager.groceryList.filter { $0.isChecked }
     }
     
@@ -81,7 +81,7 @@ struct GroceryListView: View {
                 shakeOffset = 0 // Finish shake in center
             }
             withAnimation(.easeIn(duration: 0.2)) {
-                isAdding = false // Reset scale/rotation
+                isAdding = false
             }
         }
     }
@@ -133,7 +133,6 @@ struct GroceryListView: View {
                                     .submitLabel(.done)
                                     .onSubmit(addNewItem)
                                 
-                                // UPDATED ADD BUTTON WITH ANIMATIONS
                                 Button(action: addNewItem) {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.title)
@@ -173,7 +172,7 @@ struct GroceryListView: View {
                                     Section {
                                         if isRemainingExpanded {
                                             ForEach(remainingItems) { item in
-                                                // Assuming ShoppingListItemRow handles the toggling action correctly
+                                                
                                                 ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
                                             }
                                             .onDelete(perform: deleteRemainingItems)
@@ -197,7 +196,7 @@ struct GroceryListView: View {
                                     Section {
                                         if isCheckedExpanded {
                                             ForEach(checkedItems) { item in
-                                                // Assuming ShoppingListItemRow handles the toggling action correctly
+                                                
                                                 ShoppingListItemRow(item: item, listManager: listManager, primaryColor: primaryColor)
                                             }
                                             .onDelete(perform: deleteCheckedItems)

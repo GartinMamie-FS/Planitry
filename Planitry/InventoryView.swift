@@ -22,19 +22,16 @@ struct InventoryView: View {
     @State private var newIngredientName: String = ""
     @State private var newIngredientQuantity: String = ""
     @State private var newIngredientUnit: String = ""
-    
-    // 🔑 NEW STATE FOR SEARCH FILTERING
+  
     @State private var searchText: String = ""
     
     @State private var recipeConstraints: String = ""
     @State private var selectedDiet: String = ""
     
-    // 🔑 ADDED STATE: Store the currently playing audio player for control
-        @State private var backgroundPlayer: AVAudioPlayer?
+    @State private var backgroundPlayer: AVAudioPlayer?
     
     let primaryColor = Color(red: 0.8, green: 0.1, blue: 0.1)
     
-    // 🔑 NEW STATE: Tracks the ingredient selected for editing
     @State private var ingredientToEdit: Ingredient? = nil
     
     // MARK: - Computed Filtered Inventory
@@ -72,7 +69,6 @@ struct InventoryView: View {
         newIngredientUnit = ""
     }
     
-    // Simplified delete logic to call the manager's delete function directly
     private func deleteIngredients(offsets: IndexSet) {
         // Find the actual items from the filtered list
         let itemsToDelete = offsets.map { filteredInventory[$0] }
@@ -100,8 +96,6 @@ struct InventoryView: View {
                 return
             }
             
-            // 1. Start the chopping sound and store the player instance
-            // NOTE: Ensure AudioPlayerHelper struct is in scope for this to work.
             backgroundPlayer = AudioPlayerHelper.playSound(named: "chopping", withExtension: "mp3")
             
             alertError = nil
@@ -141,8 +135,6 @@ struct InventoryView: View {
             // Use a main VStack to stack the Banner/Input, the Scrollable List, and the Fixed Button
             VStack(spacing: 0) {
                 
-                // --- Hidden NavigationLink for Result Transition (Stays Hidden) ---
-                // ... (NavigationLink code remains the same) ...
                 NavigationLink(
                     destination: Group {
                         if let meal = foundMeal {
@@ -170,7 +162,7 @@ struct InventoryView: View {
                 )
                 .hidden()
                 
-                // ⭐️ MARK: - SECTION 1: HEADER & ADD INPUT (Fixed at Top)
+                //MARK: - SECTION 1: HEADER & ADD INPUT (Fixed at Top)
                 VStack(spacing: 0) {
                     BannerView(
                         title: "Inventory",
@@ -187,7 +179,7 @@ struct InventoryView: View {
                             
                             HStack {
                                 TextField(
-                                    "Name (e.g., Chicken Breast)", // Shortened the hint for clarity
+                                    "Name (e.g., Chicken Breast)",
                                     text: $newIngredientName
                                 )
                                 
@@ -220,11 +212,10 @@ struct InventoryView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 10)
                 }
-                // --------------------------------------------------------
+            
                 
                 // MARK: - SECTION 2: SCROLLABLE INVENTORY LIST
-                // We use a List here instead of embedding a List in a ScrollView
-                // and apply .frame(maxHeight: .infinity) to fill the center space.
+              
                 VStack(alignment: .leading, spacing: 5) {
                     
                     Text("YOUR CURRENT INVENTORY (\(filteredInventory.count))")
@@ -241,7 +232,7 @@ struct InventoryView: View {
                         .padding(.bottom, 5)
                     
                     List {
-                        // 🔑 The List will now naturally handle scrolling and height
+                        // The List will now naturally handle scrolling and height
                         // if it exceeds the available space in the middle.
                         ForEach(filteredInventory) { item in
                             HStack {
@@ -252,7 +243,7 @@ struct InventoryView: View {
                                     .foregroundColor(.secondary)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                // ... (Swipe actions remain the same) ...
+                                
                                 Button(role: .destructive) {
                                     if let index = filteredInventory.firstIndex(where: { $0.id == item.id }) {
                                         deleteIngredients(offsets: IndexSet(integer: index))
@@ -273,7 +264,7 @@ struct InventoryView: View {
                     }
                     // Removing the problematic .frame(height: max(...))
                     .listStyle(.insetGrouped)
-                    // 🔑 Use .frame(maxHeight: .infinity) to let the List fill the remaining vertical space
+                    
                     .frame(maxHeight: .infinity)
                     
                 }
